@@ -38,7 +38,7 @@ None of that exists yet. Right now this is the server skeleton being reworked. B
 
 ## Status
 
-Server skeleton: IAS/ECS/CCS endpoints and the title packaging pipeline, being reworked from the WiiSOAP base. Previews will appear here when there is something worth showing.
+Fixed the 209593 error and the shop works on both the Wii and Dolphin (best with a real NAND), however the downloading and installing pipeline is NOT finished yet. Stay tuned.
 
 - Mark
 
