@@ -38,7 +38,7 @@ None of that exists yet. Right now this is the server skeleton being reworked. B
 
 ## Status
 
-Fixed the 209593 error and the shop works on both the Wii and Dolphin (best with a real NAND), however the downloading and installing pipeline is NOT finished yet. Stay tuned.
+The UI is partly finished but i decided to focus on the downloading mechanism first instead of the UI so i dont waste as much time trying to design something ill probably mess up later.
 
 - Mark
 
