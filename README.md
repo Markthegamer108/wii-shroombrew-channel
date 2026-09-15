@@ -38,7 +38,7 @@ None of that exists yet. Right now this is the server skeleton being reworked. B
 
 ## Status
 
-The UI is partly finished but i decided to focus on the downloading mechanism first instead of the UI so i dont waste as much time trying to design something ill probably mess up later.
+The interface is incomplete because I prioritized building the download mechanism first. This approach prevents wasted effort on a design that I plan to refine later.
 
 - Mark
 
