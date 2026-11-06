@@ -130,7 +130,7 @@ if (now.getMonth() == 3 && now.getDate() == 1) {
   document.title = "Wiizer Shop Channel";
   var theme1 = new Audio('snd/theme1.mp3');
   var theme2 = new Audio('snd/theme2fool.mp3');
-} else if(now.getMonth() == 11 && now.getDate() == 25) {
+} else if(now.getMonth() == 11 && now.getDate() >= 1 && now.getDate() <= 26) {
   var theme1 = new Audio('snd/theme1jolly.mp3');
   var theme2 = new Audio('snd/theme2jolly.mp3');
 } else if(Math.random() < 0.01) {
@@ -160,6 +160,27 @@ var kbd_ok = new Audio("snd/kbd_ok.wav");
 var soundlist = [document.getElementById("cSE_Forcus"), document.getElementById("cSE_Decide"), document.getElementById("cSE_Cancel"), document.getElementById("cSE_Finish"), loadsnd, kbd_open, kbd_hover, kbd_key, kbd_space, kbd_backspace, kbd_denied, kbd_okhover, kbd_ok];
 var introplayed = false;
 var loading = true;
+// Browsers block audio before the first user interaction, so the BGM started by
+// the landing auto-enter (not a click) is paused. Resume it on first interaction.
+var shroomResumed = false;
+function shroomResumeAudio() {
+  if (shroomResumed) { return; }
+  shroomResumed = true;
+  try {
+    if (introplayed) {
+      theme2.play();
+    } else {
+      theme1.play();
+    }
+    if (loading) {
+      var p = loadsnd.play();
+      if (p !== undefined && p.catch) { p.catch(function(){}); }
+    }
+  } catch (e) {}
+}
+document.addEventListener('pointerdown', shroomResumeAudio, true);
+document.addEventListener('touchstart', shroomResumeAudio, true);
+document.addEventListener('keydown', shroomResumeAudio, true);
 var ring1 = document.getElementById("load1");
 var ring2 = document.getElementById("load2");
 var hist = [];
@@ -220,9 +241,10 @@ var content_finished_loading = function(iframe) {
   }
   if (iframe.contentWindow.location.href.endsWith("wiishopchannel.net/oss/serv/index.html") || iframe.contentWindow.location.href.endsWith("wiishopchannel.net/oss/serv/")) {
     if (iframe == currentiframe) {
-      ring2.src = "img/ring.png";
-      ring1.style = "top: 264px; left: 264px; width: 100px; height: 100px; opacity: 0.25; z-index: 3;";
-      ring2.style = "top: 254px; left: 254px; width: 100px; height: 100px; z-index: 4;";
+      // Shroombrew landing: show the original channel's "Connecting. Please wait..."
+      // message (no ring) and auto-enter the shop once the page has rendered.
+      ring1.style.display = 'none';
+      ring2.style.display = 'none';
       var queryString = window.location.search.substr(1);
       var gotolink = "";
       if (queryString == "") {
@@ -230,15 +252,17 @@ var content_finished_loading = function(iframe) {
       } else {
         gotolink = "B_05.html?titleId=" + queryString;
       }
-      document.getElementById("link").href = "javascript:goto('" + gotolink + "')";
-      iframe.contentWindow.document.getElementById("wiiMessage").innerHTML = "Click the ring to continue.";
-      //document.getElementById("note").style.display = "flex";
+      document.getElementById("link").removeAttribute("href");
+      var landingMsg = iframe.contentWindow.document.getElementById("wiiMessage");
+      if (landingMsg) { landingMsg.innerHTML = "Connecting. Please wait..."; }
       loading = true;
       introplayed = false;
       theme1.pause();
       theme1.currentTime = 0;
       theme2.pause();
       theme2.currentTime = 0;
+      // Auto-enter the shop once the landing page has rendered.
+      setTimeout(function() { goto(gotolink); }, 900);
     }
   } else {
     if (iframe.contentWindow.location.href.includes("wiishopchannel.net/oss/serv/W_01")) {
@@ -254,7 +278,8 @@ var content_finished_loading = function(iframe) {
       loadsnd.currentTime = 0;
     }
     if (!introplayed) {
-      theme1.play();
+      var tp = theme1.play();
+      if (tp !== undefined && tp.catch) { tp.catch(function(){}); }
     }
   }
   iframe.contentWindow.onmousemove = framecursormove;
@@ -807,7 +832,8 @@ function mainloop() {
   }
   // Plays the second half of the music if the first half is finished.
   if (introplayed) {
-    theme2.play();
+    var tp2 = theme2.play();
+    if (tp2 !== undefined && tp2.catch) { tp2.catch(function(){}); }
   }
   //document.getElementById("line01").textContent = "";
   //document.getElementById("line02").textContent = "";

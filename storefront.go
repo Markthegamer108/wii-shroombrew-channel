@@ -50,9 +50,10 @@ type storefront struct {
 	bySlug       map[string]catalogApp
 	view         *template.Template
 	installs     *installManager
-	channels     *channelBuilder
-	channelsRoot string
-	iconsRoot    string
+	channels          *channelBuilder
+	channelsRoot      string
+	iconsRoot         string
+	flashTemplatePath string
 }
 type shopPage struct {
 	Screen       string
@@ -142,6 +143,12 @@ func newStorefront(path string) (*storefront, error) {
 	s.channels = newChannelBuilder()
 	s.channelsRoot = "./channels"
 	s.iconsRoot = "./icons"
+	// Operator-supplied official Flash runtime WAD used to build Flash game
+	// channels. Configured with an env var so it can point anywhere.
+	s.flashTemplatePath = os.Getenv("SHROOMBREW_FLASH_TEMPLATE")
+	if s.flashTemplatePath == "" {
+		s.flashTemplatePath = "./flash-template.wad"
+	}
 	return s, err
 }
 func (s *storefront) handler(soap http.Handler) http.Handler {

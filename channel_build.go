@@ -16,7 +16,12 @@ import (
 	"time"
 
 	"github.com/Markthegamer108/wii-shroombrew-channel/internal/channelpkg"
+	"github.com/Markthegamer108/wii-shroombrew-channel/internal/flashpkg"
 )
+
+// flashFetchLimit bounds a Flash movie download. Flash games are often bigger
+// than the native homebrew package limit, so use a generous cap.
+const flashFetchLimit = 512 << 20
 
 // Synthesized channels use a title version above the catalog's, so a console
 // that already has the old Open Shop Channel release downloads the new one.
@@ -105,7 +110,9 @@ func canSynthesize(app catalogApp) bool {
 	if !channelpkg.ValidSDApp(app.Slug) {
 		return false
 	}
-	if app.FileSize.ZipCompressed > channelpkg.MaxPayload {
+	// Flash titles are injected from an SWF (not a native app package), so the
+	// homebrew package-size limit does not apply to them.
+	if !app.Flash && app.FileSize.ZipCompressed > channelpkg.MaxPayload {
 		return false
 	}
 	_, err := approvedPackageURL(app.URL.Zip)
@@ -160,6 +167,10 @@ func (s *storefront) buildChannel(ctx context.Context, app catalogApp) error {
 		return ctx.Err()
 	}
 
+	if app.Flash {
+		return s.buildFlashChannel(ctx, app, id, started)
+	}
+
 	u, err := approvedPackageURL(app.URL.Zip)
 	if err != nil {
 		return err
@@ -209,6 +220,62 @@ func (s *storefront) buildChannel(ctx context.Context, app catalogApp) error {
 	}
 	log.Printf("channel %s: ready, %d bytes, version %d, took %s", id, len(wad), manifest.Version, time.Since(started).Round(time.Second))
 	return nil
+}
+
+// buildFlashChannel injects a catalog Flash movie into the operator-supplied
+// official Flash runtime WAD and publishes it as a fakesigned Wii channel.
+func (s *storefront) buildFlashChannel(ctx context.Context, app catalogApp, id string, started time.Time) error {
+	swfURL, err := approvedPackageURL(app.URL.Zip)
+	if err != nil {
+		return err
+	}
+	swf, err := fetchBytes(ctx, s.installs.client, swfURL.String(), flashFetchLimit)
+	if err != nil {
+		return fmt.Errorf("download Flash movie: %w", err)
+	}
+	template, err := s.flashTemplate()
+	if err != nil {
+		return err
+	}
+	icon := s.iconFor(ctx, app)
+	version := synthVersion(app)
+
+	wad, err := flashpkg.Inject(flashpkg.Options{
+		Template:        template,
+		SWF:             swf,
+		TitleID:         mustTitleID(id),
+		TitleVersion:    version,
+		Region:          0xffff, // region-free
+		Name:            app.Name,
+		Author:          app.Author,
+		Description:     app.Description.Short,
+		Category:        app.Category,
+		ReleaseDate:     time.Unix(app.ReleaseDate, 0),
+		IconPNG:         icon,
+		DisplayVersion:  app.Version,
+		Zoom:            "auto",
+		Mouse:           true,
+		Quality:         "high",
+	})
+	if err != nil {
+		return fmt.Errorf("inject Flash channel: %w", err)
+	}
+	manifest, err := channelpkg.Publish(wad, s.channelsRoot, app.Slug, id)
+	if err != nil {
+		return fmt.Errorf("publish Flash channel: %w", err)
+	}
+	log.Printf("channel %s: ready (Flash), %d bytes, version %d, took %s", id, len(wad), manifest.Version, time.Since(started).Round(time.Second))
+	return nil
+}
+
+// flashTemplate returns the operator-supplied official Flash runtime WAD. Its
+// path is configured with SHROOMBREW_FLASH_TEMPLATE (default ./flash-template.wad).
+func (s *storefront) flashTemplate() ([]byte, error) {
+	data, err := os.ReadFile(s.flashTemplatePath)
+	if err != nil {
+		return nil, fmt.Errorf("Flash base WAD (%s) could not be read: %w", s.flashTemplatePath, err)
+	}
+	return data, nil
 }
 
 // iconFor prefers the icon already served by the shop, then the catalog URL.
