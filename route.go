@@ -66,11 +66,28 @@ func (r *RoutingGroup) Authenticated(action string, function func(e *Envelope)) 
 
 func (route *Route) Handle() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%s %s via %s", aurora.Yellow(r.Method), aurora.Cyan(r.URL), aurora.Cyan(r.Host))
+		// Log route metadata only; SOAP bodies contain device authentication tokens.
+		log.Printf("%s %s via %s", aurora.Yellow(r.Method), aurora.Cyan(r.URL.Path), aurora.Cyan(r.Host))
+		r.Body = http.MaxBytesReader(w, r.Body, 1024*1024)
+
+		if r.Method != "POST" {
+			printError(w, "WiiSOAP can't handle this. Try again later.")
+			return
+		}
+
+		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			printError(w, "Error reading request body...")
+			return
+		}
 
 		// Check if there's a header of the type we need.
 		service, actionName := parseAction(r.Header.Get("SOAPAction"))
-		if service == "" || actionName == "" || r.Method != "POST" {
+		if service == "" || actionName == "" {
+			service, actionName = sniffActionFromXML(string(body))
+		}
+
+		if service == "" || actionName == "" {
 			printError(w, "WiiSOAP can't handle this. Try again later.")
 			return
 		}
@@ -87,11 +104,6 @@ func (route *Route) Handle() http.Handler {
 		}
 
 		debugPrint("[!] Incoming ", aurora.Yellow(strings.ToUpper(service)), " request - handling request ", aurora.Yellow(actionName))
-		body, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			printError(w, "Error reading request body...")
-			return
-		}
 
 		// Ensure we can route to this action before processing.
 		// Search all registered actions and find a matching action.
@@ -108,8 +120,6 @@ func (route *Route) Handle() http.Handler {
 			return
 		}
 
-		debugPrint("Client sent:\n", aurora.BrightGreen(string(body)))
-
 		// Insert the current action being performed.
 		e, err := NewEnvelope(service, actionName, body)
 		if err != nil {
@@ -119,28 +129,28 @@ func (route *Route) Handle() http.Handler {
 
 		// Check for authentication.
 		if action.NeedsAuthentication {
-			success, err := checkAuthentication(e)
+			success, authErr := checkAuthentication(e)
 			// Catch-all in case of invalid formatting or true invalidity.
-			if !success || (err != nil) {
-				http.Error(w, "Unauthorized.", http.StatusUnauthorized)
-				return
+			if !success || authErr != nil {
+				// Report the problem inside a normal SOAP reply. A bare HTTP
+				// 401 makes the console show an HTTP-status code (204701)
+				// instead of the shop's own error screen.
+				e.Error(901, "authentication failed", authErr)
+			} else {
+				action.Callback(e)
 			}
+		} else {
+			// Call this action.
+			action.Callback(e)
 		}
 
-		// Call this action.
-		action.Callback(e)
-
-		// The action has now finished its task, and we can serialize.
-		// Output may or may not truly be XML depending on where things failed.
-		// We'll expect the best, however.
+		// Nintendo's services answered with HTTP 200 even when the SOAP body
+		// carried an ErrorCode. The console's EC library only maps those codes
+		// to the familiar 205xxx screens if it can parse the body, so keep the
+		// transport successful and let ErrorCode carry the failure.
 		w.Header().Set("Content-Type", "text/xml; charset=utf-8")
-		success, contents := e.becomeXML()
-		if !success {
-			// This is not what we wanted, and we need to reflect that.
-			w.WriteHeader(http.StatusInternalServerError)
-		}
+		_, contents := e.becomeXML()
 		w.Write([]byte(contents))
-		debugPrint("Writing response:\n", aurora.BrightCyan(contents))
 	})
 }
 
@@ -186,7 +196,7 @@ func checkAuthentication(e *Envelope) (bool, error) {
 		return false, err
 	} else if err != nil {
 		// We shouldn't encounter other errors.
-		debugPrint("error occurred while checking authentication: %v\n", err)
+		debugPrint("error occurred while checking authentication: ", err)
 		return false, err
 	} else {
 		return true, nil

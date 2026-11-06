@@ -1,0 +1,75 @@
+html{background:#e7eff2}body{margin:0;color:#323232;font:18px "Wii NTLG PGothic JPN Regular","Wii NTLG PGothic Regular","Arial",sans-serif}a{color:inherit;text-decoration:none}img{border:0}#channel{position:relative;width:608px;height:456px;overflow:hidden;background:#fff;margin:0 auto}h1,h2,p{margin:0}h1{font-size:28px;font-weight:bold}h2{font-size:22px}#page-title{position:absolute;left:29px;top:28px;width:435px;height:36px;overflow:hidden;white-space:nowrap}.screen-main #page-title{color:#34beed;width:550px}.dots{position:absolute;left:14px;width:580px;border-top:2px dotted #bbb;height:1px}.top-dots{top:72px}.bottom-dots{top:370px}.sound{cursor:pointer}.sound:focus{outline:2px solid #34beed}.icon-button{position:absolute;top:18px;width:52px;height:55px}#home{left:474px}#help{left:534px}.bottom-button{position:absolute;width:187px;height:55px;line-height:55px;text-align:center;background:url('/shop/assets/under_banner_a.gif') no-repeat;font-size:18px;border:0;color:#323232;cursor:pointer;padding:0}.bottom-button:hover,.bottom-button:focus{background-image:url('/shop/assets/under_banner_b.gif')}.bottom-left{left:25px;top:383px}.bottom-right{left:396px;top:383px}#balance{position:absolute;left:239px;top:380px;width:130px;height:60px;text-align:center;font-size:18px}#balance span{display:block;color:#34beed;font-size:26px;line-height:30px}#balance:hover{color:#34beed}.channel-tile{position:absolute;top:73px;width:191px;height:149px}.channel-tile span{position:absolute;left:12px;top:107px;width:167px;text-align:center;font-size:13px}.channel-tile img{display:block}#virtual-console{left:17px}#wiiware{left:210px}#wii-channels{left:403px}.points-button{position:absolute;left:158px;top:223px;width:292px;height:69px;background:url('/shop/assets/Wiipoint_banner_a.gif') no-repeat;text-align:center;line-height:69px;font-size:22px}.points-button:hover{background-image:url('/shop/assets/Wiipoint_banner_b.gif')}.option-button{position:absolute;top:303px;width:184px;height:59px;background:url('/shop/assets/option2_a.png') no-repeat;text-align:center;font-size:16px;line-height:59px}.option-button:hover{background-image:url('/shop/assets/option2_b.png')}#account-activity{left:21px}#all-titles{left:212px}#settings{left:403px;line-height:20px;padding-top:9px;height:50px}.browse-button{position:absolute;text-align:center;height:85px;line-height:85px;font-size:20px}.half{width:260px;background:url('/shop/assets/B01_halfbanner_a.png') no-repeat;top:84px}.half:hover{background-image:url('/shop/assets/B01_halfbanner_b.png')}.newest{left:20px}.alphabetical{left:326px}.full{width:552px;left:28px;background:url('/shop/assets/B01_banner_a.png') no-repeat}.full:hover{background-image:url('/shop/assets/B01_banner_b.png')}.categories{top:175px}.search{top:266px}#catalog-summary{position:absolute;left:36px;top:79px;font-size:13px;color:#777;width:536px;white-space:nowrap;overflow:hidden}#catalog-list{position:absolute;left:36px;top:101px;width:540px;height:264px;overflow:hidden}.catalog-row{display:block;position:relative;height:84px;margin-bottom:3px;border:1px solid #34beed;background:#f6fcfe}.catalog-row:hover,.catalog-row:focus{background:#def8ff;border-color:#00a2d6}.title-icon{position:absolute;left:12px;top:19px}.title-name{position:absolute;left:156px;top:9px;width:365px;font-size:18px;font-weight:bold;white-space:nowrap;overflow:hidden}.title-author{position:absolute;left:156px;top:35px;width:345px;white-space:nowrap;overflow:hidden;font-size:13px}.title-type{position:absolute;left:156px;top:59px;font-size:13px;color:#666}.title-price{position:absolute;right:13px;top:58px;color:#138bb5;font-size:15px}#pagination{position:absolute;left:352px;top:383px;width:229px;height:55px}.page-arrow{position:absolute;top:0;width:52px;height:52px}#previous-page{left:0}#next-page{right:0}#page-count{position:absolute;left:54px;top:9px;width:120px;text-align:center;font-size:14px;line-height:34px}.scroll-panel{position:absolute;left:35px;top:88px;width:538px;height:271px;overflow:auto}.info-panel{font-size:17px;line-height:25px}.info-panel h2{color:#34beed;margin-bottom:14px}.info-panel p{margin-bottom:15px}.text-option{display:block;padding:14px 10px;border-bottom:1px dotted #b9d7df;color:#1687ad}.text-option:hover{background:#e6f9ff}.detail-heading{min-height:60px}.detail-heading img{float:left;margin:2px 16px 10px 0}.detail-heading h2{font-size:20px}.detail-heading p{font-size:13px;margin:4px 0 8px}.detail-meta{clear:both;background:#34beed;color:#fff;padding:5px 10px;font-size:14px;margin:8px 0 12px}#detail-panel p{font-size:15px;line-height:22px;margin-bottom:12px}.description{white-space:pre-wrap;word-wrap:break-word}.notice{border-top:1px dotted #aaa;padding-top:10px;color:#555}#search-form{position:absolute;left:44px;top:117px;width:520px;height:231px}#search-form label{display:block;text-align:center;margin-bottom:28px}#q{display:block;width:484px;height:42px;border:2px solid #34beed;font:23px Arial;padding:5px 12px;color:#323232;background:#f8fdff}.search-submit{top:151px;left:166px}.category-link{display:block;padding:12px 16px;border:1px solid #34beed;margin:5px 0;text-transform:capitalize;font-size:20px;background:#f5fcff}.category-link:hover{background:#dff7ff}.empty{text-align:center;padding-top:75px;font-size:18px;line-height:28px}#welcome-title{position:absolute;left:29px;top:25px;color:#34beed}#recommend-label{position:absolute;left:39px;top:75px;font-size:15px;color:#6c6c6c}#recommendations{position:absolute;left:41px;top:100px;width:530px;height:155px}.recommend{float:left;display:block;width:160px;height:67px;margin:0 13px 10px 0;text-align:center;border:1px solid #c9e9f5;background:#f8fdff;overflow:hidden}.recommend:hover{border-color:#34beed;background:#dff7ff}.recommend img{display:block;margin:4px auto 1px}.recommend span{display:block;font-size:12px;white-space:nowrap;overflow:hidden}#welcome-news{position:absolute;left:47px;top:266px;width:514px;font-size:14px}#welcome-news a{display:block;height:25px;line-height:25px;border-bottom:1px dotted #c4c4c4}#welcome-news a:hover{color:#1aa9da;background:#edfbff}#welcome-news img{vertical-align:middle;margin-right:8px}#start-shopping{position:absolute;left:123px;top:365px;width:365px;height:76px;background:url('/shop/assets/GifA_GoShop_noAction.png') no-repeat;text-align:center;line-height:76px;font-size:24px}#start-shopping:hover,#start-shopping:focus{background-image:url('/shop/assets/GifA_GoShop_Over.png')}
+#all-titles{line-height:20px;padding-top:9px;height:50px}
+/* Exact archived W_03 / B_01 / oss.css geometry. Coordinates are local to the 608x456 channel viewport. */
+body{line-height:normal}
+#page-title{width:442px;height:28px}
+.channel-tile span{left:10px;top:101px;width:171px;height:22px;font-size:16px;line-height:normal}
+.icon-button{top:23px;z-index:3}#home{left:477px}#help{left:537px}
+.top-buttons-shadow{position:absolute;left:467px;top:15px}
+.dots{display:none}
+.top-dots{top:59px;width:473px}.screen-main .top-dots{width:600px}.bottom-dots{top:363px;width:600px}
+.bottom-left{top:378px}.bottom-right{left:399px;top:378px}
+.footer-shadow-left{position:absolute;left:13px;top:369px}.footer-shadow-right{position:absolute;left:387px;top:369px}
+.bottom-button{line-height:19px;display:table}
+.button-label{display:table-cell;vertical-align:middle;text-align:center}
+#balance{left:241px;top:378px;width:130px;height:43px}
+#balance .point-value{position:absolute;left:0;top:0;width:130px;height:22px;font-size:22px;line-height:normal}
+#balance .point-label{position:absolute;left:0;top:23px;width:130px;height:20px;font-size:18px;line-height:normal;color:#323232}
+.points-button{font-size:18px;line-height:22px}
+.points-button .button-label{display:table;position:absolute;left:35px;top:21px;width:224px;height:22px}
+.option-button{display:table;font-size:16px;line-height:18px}
+#settings,#all-titles{height:59px;padding-top:0;line-height:18px}
+#browse-caption{position:absolute;left:29px;top:80px;width:545px;height:18px;font-size:16px;font-weight:bold;color:#34beed}
+.browse-button{display:table;font-size:16px;line-height:18px}
+.half{top:105px}.newest{left:320px}.alphabetical{left:28px}.categories{top:190px}.search{top:275px}
+#pagination{left:372px;top:385px;width:205px}#page-count{left:56px;top:0;width:92px;height:36px;line-height:36px}
+/* Original B_04 catalog geometry and its supplied 488x91 row artwork. */
+#catalog-summary{left:36px;top:79px;width:536px;height:18px;font-size:14px;line-height:18px}
+#catalog-list{left:36px;top:101px;width:540px;height:264px;overflow:auto;border:1px solid #35beed;box-sizing:border-box}
+.catalog-row{display:block;position:relative;width:488px;height:91px;margin:24px 0 0;border:0;background:transparent;overflow:hidden}
+.catalog-row+.catalog-row{margin-top:21px}
+.catalog-banner{position:absolute;left:0;top:0;width:488px;height:91px;z-index:0}
+.title-icon{left:18px;top:9px;width:96px;height:72px;z-index:1}
+.title-name{left:120px;top:8px;width:350px;height:18px;font-size:16px;font-weight:normal;line-height:18px;z-index:1}
+.title-author{left:120px;top:46px;width:350px;height:18px;font-size:14px;line-height:18px;z-index:1}
+.title-type{left:120px;top:64px;width:220px;height:14px;font-size:12px;line-height:14px;color:#323232;z-index:1;text-transform:capitalize}
+.title-price{right:18px;top:64px;width:188px;height:18px;font-size:14px;line-height:18px;text-align:right;color:#323232;font-weight:bold;z-index:1}
+.catalog-row:hover,.catalog-row:focus{background:transparent;border:0}
+#page-count{white-space:nowrap}
+#recommendations{left:18px;top:70px;width:564px;height:162px}
+.recommend{position:relative;width:282px;height:81px;margin:0;border:0;background:transparent;text-align:left}
+.recommend img{position:absolute;left:9px;top:3px;width:80px;height:auto;margin:0}
+.recommend span{position:absolute;left:99px;top:10px;width:174px;white-space:normal;font-size:14px;font-weight:bold;line-height:normal}
+#welcome-title{top:27px;font: bold 30px "PW-RodinNTLG TT M","Wii NTLG PGothic JPN Regular",sans-serif}
+#welcome-news{top:263px}#welcome-news a{border:0}
+/* Original retired-channel welcome screen: one news panel plus the GoShop banner. */
+#welcome-panel{position:absolute;left:123px;top:233px;width:365px;height:128px;background:#fff;border-radius:8px;box-shadow:0 4px 8px #aaa;overflow:hidden}
+#welcome-panel-heading{height:31px;background:#34beed;color:#fff;text-align:center;font-size:18px;line-height:31px}
+#welcome-message{display:block;height:97px;text-align:center;color:#323232;font-size:16px;line-height:45px;white-space:nowrap;overflow:hidden}
+#welcome-message:hover{background:#f0fcff}
+/* Match the retired-channel welcome layout in the 608x456 Wii viewport. */
+#welcome-title{left:107px}
+#welcome-recommended{position:absolute;left:347px;top:35px;color:#34beed;font-size:16px;white-space:nowrap}
+#welcome-panel{left:47px;width:514px;height:102px}
+#welcome-message{height:71px;padding-left:32px;text-align:left}
+/* Exact W_01 header: one centered inline title group, not two independently positioned labels. */
+#welcome-heading{position:absolute;left:29px;top:25px;width:551px;height:42px;margin-top:2px;text-align:center;z-index:4}
+#welcome-heading #welcome-title{position:static;left:auto;top:auto;color:#34beed;font-size:30px;font-family:"PW-RodinNTLG TT M","Wii NTLG PGothic JPN Regular",sans-serif;font-weight:bold;margin-top:8px;max-width:590px;max-height:42px}
+#welcome-heading #welcome-recommended{position:static;left:auto;top:auto;color:#34beed;font-family:"PW-RodinNTLG TT M","Wii NTLG PGothic JPN Regular",sans-serif;font-size:16px;font-weight:normal;margin-top:8px;white-space:normal}/* Welcome screen measured against the reference Dolphin channel. */
+.screen-welcome .dots{display:none}
+#welcome-recommendations{position:absolute;left:43px;top:75px;width:524px;height:142px;overflow:hidden}
+.recommend{position:relative;float:left;width:262px;height:70px;margin:0;border:0;background:transparent;overflow:hidden;text-align:left}
+.recommend img{position:absolute;left:6px;top:5px;width:72px;height:54px;object-fit:contain}
+.recommend-name{position:absolute;left:90px;top:11px;width:162px;height:31px;overflow:hidden;font-size:15px;font-weight:bold;line-height:16px}
+.recommend-price{position:absolute;left:90px;top:45px;color:#555;font-size:13px;line-height:16px}
+.recommend:hover .recommend-name,.recommend:focus .recommend-name{color:#159fce}
+#welcome-panel{left:47px;top:233px;width:514px;height:128px;border-radius:8px;box-shadow:0 4px 8px #aaa}
+#welcome-panel-heading{height:31px;line-height:31px}
+#welcome-message{height:97px;padding-left:64px;text-align:left;line-height:25px}/* Wii Opera needs a raster shadow; CSS box-shadow is not implemented by the channel browser. */
+#welcome-panel-shadow{position:absolute;left:47px;top:233px;width:514px;height:128px;z-index:1}
+#welcome-panel{z-index:2;box-shadow:none}
+
+#settings-panel{position:absolute;left:35px;top:88px;width:538px;height:271px;overflow:auto}.setting-toggle:after{content:"";float:right;width:14px;height:14px;margin:4px 3px 0 0;border:1px solid #159fce;border-radius:8px;background:#39bfeb}.setting-toggle.is-off:after{background:#fff}
+
+#install-code{font-size:40px;letter-spacing:8px;color:#34beed;text-align:center;font-weight:bold;margin:8px 0 18px}
+input.bottom-button{font-family:inherit;font-size:18px}

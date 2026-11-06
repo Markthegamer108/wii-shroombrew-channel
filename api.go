@@ -5,21 +5,27 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strings"
+	"time"
 )
 
 const oscAPIUrl = "https://hbb1.oscwii.org/api/v3/contents"
 
+var oscHTTPClient = &http.Client{Timeout: 15 * time.Second}
+
 type OSCApp struct {
-	Shop Shop `json:"shop"`
+	Slug string `json:"slug"`
+	Shop Shop   `json:"shop"`
 }
 
 type Shop struct {
-	TitleId string `json:"title_id"`
-	Version int    `json:"title_version"`
+	TitleId      string `json:"title_id"`
+	Version      int    `json:"title_version"`
+	ContentsSize int64  `json:"contents_size"`
 }
 
 func GetOSCApp(titleId string) (*OSCApp, error) {
-	resp, err := http.Get(oscAPIUrl)
+	resp, err := oscHTTPClient.Get(oscAPIUrl)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +44,7 @@ func GetOSCApp(titleId string) (*OSCApp, error) {
 	}
 
 	for _, app := range apps {
-		if app.Shop.TitleId == titleId {
+		if strings.EqualFold(app.Shop.TitleId, titleId) {
 			return &app, nil
 		}
 	}

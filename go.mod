@@ -9,7 +9,11 @@ require (
 	github.com/jackc/pgconn v1.12.1
 	github.com/jackc/pgx/v4 v4.16.1
 	github.com/logrusorgru/aurora/v3 v3.0.0
+	github.com/wii-tools/arclib v1.1.0
+	github.com/wii-tools/libtpl v0.0.0-20240108143603-e66a8e51037d
+	github.com/wii-tools/lzx v0.0.0-20231115152519-4c1183c96cc6
 	github.com/wii-tools/wadlib v0.3.1
+	golang.org/x/image v0.15.0
 )
 
 require (
@@ -24,5 +28,5 @@ require (
 	github.com/jackc/puddle v1.2.1 // indirect
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97 // indirect
 	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110 // indirect
-	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/text v0.14.0 // indirect
 )

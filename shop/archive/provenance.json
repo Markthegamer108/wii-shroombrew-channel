@@ -1,0 +1,25 @@
+{
+  "archive": "https://archive.org/details/WiiShopChannelBackup",
+  "pages": [
+    {
+      "page": "B_08",
+      "file": "B_08.jsp_titleId=0001000157414945",
+      "sha256": "4dbb7fc5f6bf7c1b9aa653cfe5b0bcb6538e5466d7c15da9e6b69a2f45c4ed7c"
+    },
+    {
+      "page": "B_09",
+      "file": "B_09.jsp_titleId=0001000157414945",
+      "sha256": "60d339aca41db52abfdd4e0c747804e0669b70c93cf493dc102386ea38cd8930"
+    },
+    {
+      "page": "B_10",
+      "file": "B_10.jsp_titleId=0001000157414945",
+      "sha256": "1b16df2b2ef41393366e3f27e8d4295fdb6a3ab9cb85b45090c50c3fa73f3d57"
+    },
+    {
+      "page": "P_01",
+      "file": "P_01.jsp_titleId=0001000157414945",
+      "sha256": "3ba5361765af5c4556693d4cc393bb3ee86ed2b53211ab3fa1bbf56bb60b7c0a"
+    }
+  ]
+}

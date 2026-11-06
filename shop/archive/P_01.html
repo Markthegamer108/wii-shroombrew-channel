@@ -1,0 +1,218 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=608,initial-scale=1"><title>Wii Shop Channel</title>
+<link rel="stylesheet" href="/archive-shop/assets/css/oss.css"><link rel="stylesheet" href="/archive-shop/assets/css/error.css">
+<script src="/native-v2/sound.js"></script><script src="/archive-shop/assets/js/buttons.js"></script><script src="/archive-shop/assets/js/images.js"></script><style type="text/css">
+  /* For P_01:  Add Wii Points page */
+#P_01_text01-01 {
+	/* pageHeading, formerly title */
+	position:absolute;
+	left:29px;
+	top:28px;
+	width:442px;
+	height:28px;
+	z-index:28;
+}
+#P_01_text02-01 {
+	/* subTitle, aka heading */
+	position:absolute;
+	left:29px;
+	top:77px;
+	width:552px;
+	height:80px;
+	z-index:26;
+}
+#text03-01 {
+	/* formerly main text */
+	position:absolute;
+	left:40px;
+	top:108px;
+	width:330px;
+	height:90px;
+	z-index:22;
+}
+#card01 {
+	/* prepaid card */
+	position:absolute;
+	left:76px;
+	top:280px;
+	width:187px;
+	height:82px;
+}
+#card02 {
+	/* credit card */
+	position:absolute;
+	left:347px;
+	top:280px;
+	width:187px;
+	height:82px;
+}
+.cardspacer {
+	position:absolute;
+	width:100%;
+	height:100%;
+	z-index:25;
+}
+.cardbannershadow{
+	position:absolute;
+	left:-13px;
+	top:-10px;
+	width:213px;
+	height:106px;
+	z-index:20;
+}
+.cardbanner {
+	position:absolute;
+	width:100%;
+	height:100%;
+	z-index:21;
+}
+#text04-01 {
+	/* prepaid card text */
+	position:absolute;
+	text-align:center;
+	top:25%;
+	width:100%;
+	z-index:23;
+}
+#text05-01 {
+	/* credit card text */
+	position:absolute;
+	text-align:center;
+	top:25%;
+	width:100%;
+	z-index:23;
+}
+#creditCardPic {
+	position:absolute;
+	left:378px;
+	top:204px;
+	width:176px;
+	height:58px;
+	z-index:78;
+}
+#pointCardPic {
+	position:absolute;
+	left:378px;
+	top:105px;
+	width:171px;
+	height:90px;
+	z-index:79;
+}
+</style><style>@font-face{font-family:"Wii NTLG PGothic JPN Regular";src:url('/archive-shop/assets/font2.ttf')}html,body{width:608px;height:456px;margin:0;overflow:hidden}body{position:relative;font-family:"Wii NTLG PGothic JPN Regular",sans-serif}#card01,#card02,#top,#help,#balanceInfo{cursor:pointer}</style>
+</head><body>
+<!--  -----------------------------------------------------  -->
+<!--  Copyright 2005-2014 Acer Cloud Technology, Inc.        -->
+<!--  All Rights Reserved.                                   -->
+<!-- -->
+<!--  This software contains confidential information and    -->
+<!--  trade secrets of Acer Cloud Technology, Inc.           -->
+<!--  Use, disclosure or reproduction is prohibited without  -->
+<!--  the prior express written permission of Acer Cloud     -->
+<!--  Technology, Inc.                                       -->
+<!--  -----------------------------------------------------  -->
+<div id="constElements">
+<div id="tophelpshadow"><img height="75" src="/archive-shop/assets/images/banner/top_help_shadow01.gif" width="132"/></div>
+<div id="help">
+<img border="0" height="55" id="ManualImageID" name="ManualImage" src="/archive-shop/assets/images/banner/help_a.gif" width="52"/>
+<img border="0" height="55" id="ManualGrayImageID" src="/archive-shop/assets/images/banner/help_gray.gif" style="display:none" width="52"/>
+<img border="0" height="55" id="HelpSpacer" name="HelpSpacer" src="/archive-shop/assets/images/spacer.gif" style="position:absolute; top:0px; left:0px; display:none" width="52"/>
+</div>
+<div id="top">
+<img border="0" height="55" id="TopImageID" name="TopImage" src="/archive-shop/assets/images/banner/top_a.gif" width="52"/>
+<img border="0" height="55" id="TopGrayImageID" src="/archive-shop/assets/images/banner/top_gray.gif" style="display:none" width="52"/>
+<img border="0" height="55" id="MainSpacer" name="MainSpacer" src="/archive-shop/assets/images/spacer.gif" style="position:absolute; top:0px; left:0px; display:none" width="52"/>
+</div>
+<div class="dot" id="line01">･･･････････････････････････････････････････････････････････&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;･･･</div>
+<div class="dot" id="line02">･･･････････････････････････････････････････････････････････････････････････</div>
+<div class="dot" id="upperLineLong" style="display:none">･･･････････････････････････････････････････････････････････････････････････</div>
+<div id="balanceInfo">
+
+<img border="0" height="55" id="PointSpacer" name="PointSpacer" src="/archive-shop/assets/images/spacer.gif" style="position:absolute; top:376px; left:239px; z-index:20;" width="130"/>
+<div id="Wiipoint">
+<div align="center" class="buttonTextBlackM">Wii Points</div>
+</div>
+<div class="wiiPoint" id="point"><span id="currentBalance"></span></div>
+</div>
+</div>
+<!--  -----------------------------------------------------  -->
+<!--  Copyright 2005-2014 Acer Cloud Technology, Inc.        -->
+<!--  All Rights Reserved.                                   -->
+<!-- -->
+<!--  This software contains confidential information and    -->
+<!--  trade secrets of Acer Cloud Technology, Inc.           -->
+<!--  Use, disclosure or reproduction is prohibited without  -->
+<!--  the prior express written permission of Acer Cloud     -->
+<!--  Technology, Inc.                                       -->
+<!--  -----------------------------------------------------  -->
+
+<div id="underButtonL" style="display:none">
+<div class="buttonBannerShadow" id="underbannershadowL">
+<img height="75" src="/archive-shop/assets/images/banner/under_banner_shadow.gif" width="211"/>
+</div>
+<div class="buttonBanner" id="underbannerL">
+<img height="55" id="underImgL" src="/archive-shop/assets/images/banner/under_banner_a.gif" width="187"/>
+</div>
+<div class="buttonSpacer" id="underspacerL">
+<a href="" id="underlinkL">
+<img border="0" height="55" id="underimageL" src="/archive-shop/assets/images/spacer.gif" width="187"/>
+</a>
+</div>
+<div align="center" class="buttonTextBlackM buttonWord" id="underwordL">
+</div>
+</div>
+<div id="underButtonR" style="display:none">
+<div class="buttonBannerShadow" id="underbannershadowR">
+<img height="75" src="/archive-shop/assets/images/banner/under_banner_shadow.gif" width="211"/>
+</div>
+<div class="buttonBanner" id="underbannerR">
+<img height="55" id="underImgR" src="/archive-shop/assets/images/banner/under_banner_a.gif" width="187"/>
+</div>
+<div class="buttonSpacer" id="underspacerR">
+<a href="" id="underlinkR">
+<img border="0" height="55" id="underimageR" src="/archive-shop/assets/images/spacer.gif" width="187"/>
+</a>
+</div>
+<div align="center" class="buttonTextBlackM buttonWord" id="underwordR">
+</div>
+</div>
+<div id="underButton" style="display:none">
+<div class="buttonBannerShadow" id="underbannershadow">
+<img height="75" src="/archive-shop/assets/images/banner/under_banner_shadow.gif" width="211"/></div>
+<div class="buttonBanner" id="underbanner">
+<img height="55" id="underImg" src="/archive-shop/assets/images/banner/under_banner_a.gif" width="187"/></div>
+<div class="buttonSpacer" id="underspacer">
+<a href="" id="underlink">
+<img border="0" height="55" id="underimage" src="/archive-shop/assets/images/spacer.gif" width="187"/>
+</a>
+</div>
+<div align="center" class="buttonTextBlackM buttonWord" id="underword"></div>
+</div>
+<div class="titleBlackL" id="P_01_text01-01">{{index .T "c_title"}}</div>
+
+<div id="wii" style="display:''">
+<div id="P_01_text02-01">
+<div align="left" class="headerBlueM">{{index .T "c_sub"}}</div>
+</div>
+<div align="left" class="contentsBlack" id="text03-01">
+{{index .T "c_text"}}<BR><BR>{{index .T "c_text2"}}</div>
+
+<div id="card01">
+<img border="0" class="cardspacer" src="/archive-shop/assets/images/spacer.gif"/>
+<img class="cardbanner" id="card01_Img" src="/archive-shop/assets/images/banner/banner03_a.gif"/>
+<img class="cardbannershadow" id="card01_Shadow" src="/archive-shop/assets/images/banner/banner03_shadow.png"/>
+<div align="center" id="text04-01">
+<span class="catalogTitleBlack">{{index .T "c_redeem_a"}}<BR>{{index .T "c_redeem_b"}}</span>
+</div>
+</div>
+
+<div id="card02">
+<img border="0" class="cardspacer" src="/archive-shop/assets/images/spacer.gif"/>
+<img class="cardbanner" id="card02_Img" src="/archive-shop/assets/images/banner/banner03_a.gif"/>
+<img class="cardbannershadow" id="card02_Shadow" src="/archive-shop/assets/images/banner/banner03_shadow.png"/>
+<div class="catalogTitleBlack" id="text05-01">
+{{index .T "c_continue_a"}}<BR>{{index .T "c_continue_b"}}</div>
+</div>
+
+<img id="creditCardPic" src="/archive-shop/assets/images/banner/card_pic_b.gif" width="176" height="58" border="0" alt=""/>
+<img id="pointCardPic" src="/archive-shop/assets/images/banner/{{.Card}}" width="171" height="90" border="0" alt=""/>
+</div>
+<script>var archiveShop={{.}};</script><script src="/archive-shop/checkout.js?v=3"></script></body></html>

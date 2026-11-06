@@ -29,6 +29,8 @@ import (
 	"math/big"
 	"math/rand"
 	"net/http"
+	"os"
+	"time"
 )
 
 const (
@@ -57,8 +59,15 @@ func main() {
 	checkError(err)
 	rand.Seed(seed.Int64())
 
+	adminMode := len(os.Args) > 1 && os.Args[1] == "admin"
+	if adminMode && (len(os.Args) == 2 || os.Args[2] == "help" || os.Args[2] == "-h") {
+		os.Exit(adminMain(nil))
+	}
+
 	// Initial Start.
-	fmt.Println("WiiSOAP 0.2.6 Kawauso\n[i] Reading the Config...")
+	if !adminMode {
+		fmt.Println("Shroombrew 0.1.0\n[i] Reading the Config...")
+	}
 
 	// Check the config.
 	ioconfig, err := ioutil.ReadFile("./config.xml")
@@ -88,6 +97,23 @@ func main() {
 
 	baseUrl = readConfig.BaseURL
 
+	if adminMode {
+		keyPath := os.Getenv("SHROOMBREW_SECRET_FILE")
+		if keyPath == "" {
+			keyPath = "./secrets.key"
+		}
+		if _, statErr := os.Stat(keyPath); statErr != nil {
+			log.Fatalf("admin: %s not found. Run from the install directory (cd /opt/shroombrew); a new key would orphan every stored card and address hash.", keyPath)
+		}
+		checkError(initShopWallets())
+		checkError(initShopPurchases())
+		checkError(initSecrets())
+		checkError(initCommunity())
+		code := adminMain(os.Args[2:])
+		pool.Close()
+		os.Exit(code)
+	}
+
 	// Start the HTTP server.
 	fmt.Printf("Starting HTTP connection (%s)...\nNot using the usual port for HTTP?\nBe sure to use a proxy, otherwise the Wii can't connect!\n", readConfig.Address)
 
@@ -107,7 +133,10 @@ func main() {
 	{
 		ias.Unauthenticated("CheckRegistration", checkRegistration)
 		ias.Unauthenticated("GetChallenge", getChallenge)
-		ias.Authenticated("GetRegistrationInfo", getRegistrationInfo)
+		// GetRegistrationInfo must be unauthenticated: the console calls it after
+		// CheckRegistration returns R but before it has a DeviceToken (lost ec.cfg).
+		// It queries by device_id+region like SyncRegistration and returns the token.
+		ias.Unauthenticated("GetRegistrationInfo", getRegistrationInfo)
 		ias.Unauthenticated("SyncRegistration", syncRegistration)
 		ias.Unauthenticated("Register", register)
 		ias.Authenticated("Unregister", unregister)
@@ -117,7 +146,22 @@ func main() {
 	{
 		cas.Authenticated("ListItems", listItems)
 	}
-	log.Fatal(http.ListenAndServe(readConfig.Address, r.Handle()))
+	store, err := newStorefront("./catalog.json")
+	checkError(err)
+	checkError(initShopWallets())
+	checkError(initShopPurchases())
+	checkError(initSecrets())
+	checkError(initCommunity())
+	go cardJanitor()
+	address := readConfig.Address
+	if override := os.Getenv("SHROOMBREW_ADDR"); override != "" {
+		address = override
+	}
+	// Browsers receive the permissioned reference snapshot. Native Wii clients
+	// use the existing compatibility frontend and Shroombrew services.
+	contentHandler := shopErrorPages(nativeContentHandler("./channels", store.nativeECHandler(store.nativeV2Handler(referenceSiteHandler("./reference-site", store.featureHandler(store.classicSiteHandler(r.Handle())))))))
+	server := &http.Server{Addr: address, Handler: contentHandler, ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 30 * time.Second, WriteTimeout: 10 * time.Minute, IdleTimeout: 60 * time.Second}
+	log.Fatal(server.ListenAndServe())
 
 	// From here on out, all special cool things should go into their respective handler function.
 }

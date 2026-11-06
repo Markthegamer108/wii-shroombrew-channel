@@ -1,0 +1,499 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=608,initial-scale=1"><title>Wii Shop Channel</title>
+<link rel="stylesheet" href="/archive-shop/assets/css/oss.css"><link rel="stylesheet" href="/archive-shop/assets/css/error.css">
+<script src="/native-v2/sound.js"></script><script src="/archive-shop/assets/js/buttons.js"></script><script src="/archive-shop/assets/js/images.js"></script><style type="text/css">
+  /* B_09:  Confirm Software Purchase */
+
+
+#text01-01 {
+	position:absolute;
+	left:29px;
+	top:28px;
+	width:442px;
+	height:28px;
+	z-index:28;
+}
+#goodsconfirmation {
+	position:absolute;
+	left:36px;
+	top:85px;
+	width:537px;
+	height:225px;
+	z-index:30;
+}
+#text03-01 {
+	position:absolute;
+	left:40px;
+	top:141px;
+	width:293px;
+	height:18px;
+	z-index:58;
+}
+#text04-01 {
+	position:absolute;
+	left:40px;
+	top:160px;
+	width:293px;
+	height:18px;
+	z-index:55;
+}
+#text05-01 {
+	position:absolute;
+	left:40px;
+	top:182px;
+	width:293px;
+	height:18px;
+	z-index:51;
+}
+#text06-01 {
+	position:absolute;
+	left:40px;
+	top:206px;
+	width:293px;
+	height:18px;
+	z-index:45;
+}
+#text07-01 {
+	position:absolute;
+	left:40px;
+	top:225px;
+	width:293px;
+	height:18px;
+	z-index:42;
+}
+#text08-01 {
+	position:absolute;
+	left:40px;
+	top:247px;
+	width:293px;
+	height:18px;
+	z-index:39;
+}
+#pointcost01 {
+	position:absolute;
+	left:340px;
+	top:141px;
+	width:90px;
+	height:18px;
+	z-index:57;
+}
+#confirmation {
+	position:absolute;
+	left:36px;
+	top:320px;
+	width:538px;
+	height:30px;
+	z-index:60;
+}
+#pointword02 {
+	position:absolute;
+	left:340px;
+	top:160px;
+	width:90px;
+	height:18px;
+	z-index:54;
+}
+#pointword03 {
+	position:absolute;
+	left:340px;
+	top:182px;
+	width:90px;
+	height:18px;
+	z-index:50;
+}
+#blockcost01 {
+	position:absolute;
+	left:340px;
+	top:206px;
+	width:90px;
+	height:18px;
+	z-index:44;
+}
+#blockcost02 {
+	position:absolute;
+	left:340px;
+	top:225px;
+	width:90px;
+	height:18px;
+	z-index:41;
+}
+#blockcost03 {
+	position:absolute;
+	left:340px;
+	top:247px;
+	width:90px;
+	height:18px;
+	z-index:38;
+}
+#text02-01 {
+	position:absolute;
+	left:40px;
+	top:270px;
+	width:528px;
+	height:20px;
+	z-index:59;
+}
+#pointword01 {
+	position:absolute;
+	left:437px;
+	top:141px;
+	width:130px;
+	height:18px;
+	z-index:56;
+}
+#points02 {
+	position:absolute;
+	left:437px;
+	top:160px;
+	width:130px;
+	height:18px;
+	z-index:53;
+}
+#pointos03 {
+	position:absolute;
+	left:437px;
+	top:182px;
+	width:130px;
+	height:18px;
+	z-index:46;
+}
+#blockword01 {
+	position:absolute;
+	left:437px;
+	top:206px;
+	width:130px;
+	height:18px;
+	z-index:43;
+}
+#blockword02 {
+	position:absolute;
+	left:437px;
+	top:225px;
+	width:130px;
+	height:18px;
+	z-index:40;
+}
+#blockword03 {
+	position:absolute;
+	left:437px;
+	top:247px;
+	width:130px;
+	height:18px;
+	z-index:34;
+}
+#TitleName1stline {	position:absolute;
+	left:64px;
+	top:88px;
+	width:480px;
+	z-index:37;
+}
+#TitleName2stline {	position:absolute;
+	left:64px;
+	top:112px;
+	width:480px;
+	z-index:36;
+}
+#selectionMessage {
+    position:absolute;
+    left:46px;
+    top:71px;
+    width:517px;
+    height:98px;
+}
+#nandDLButton {
+    position:absolute;
+    left:46px;
+    top:169px;
+    width:236px;
+    height:184px;
+}
+#banner01 {
+    position:absolute;
+    left:0px;
+    top:0px;
+    width:100%;
+    height:100%;
+    z-index:28;
+}
+#text01 {
+    position:absolute;
+    left:8px;
+    top:116px;
+    width:220px;
+    height:54px;
+    z-index:29;
+}
+#spacer01 {
+    position:absolute;
+    left:0px;
+    top:0px;
+    width:100%;
+    height:100%;
+    z-index:30;
+}
+
+
+#sdDLButton {
+    position:absolute;
+    left:326px;
+    top:169px;
+    width:236px;
+    height:184px;
+}
+#banner02 {
+    position:absolute;
+    left:0px;
+    top:0px;
+    width:100%;
+    height:100%;
+    z-index:28;
+}
+#text02 {
+    position:absolute;
+    left:8px;
+    top:116px;
+    width:220px;
+    height:54px;
+    z-index:29;
+}
+#spacer02 {
+    position:absolute;
+    left:0px;
+    top:0px;
+    width:100%;
+    height:100%;
+    z-index:30;
+}
+#sdDisable {
+	position:absolute;
+	left:0px;
+	top:0px;
+	width:100%;
+	height:100%;
+	z-index:40;
+}
+
+#coolingoff {
+	position:absolute;
+	left:34px;
+	top:94px;
+	width:542px;
+	height:81px;
+	z-index:28;
+}</style><style>@font-face{font-family:"Wii NTLG PGothic JPN Regular";src:url('/archive-shop/assets/font2.ttf')}html,body{width:608px;height:456px;margin:0;overflow:hidden}body{position:relative;font-family:"Wii NTLG PGothic JPN Regular",sans-serif}#TitleName1stline{white-space:nowrap;text-overflow:ellipsis}#archiveStatus{position:absolute;left:54px;top:180px;width:500px;text-align:center;font-size:18px;color:#323232}#archiveNote{position:absolute;left:54px;top:307px;width:500px;text-align:center;font-size:15px;color:#323232}#archiveMeter{position:absolute;left:114px;top:245px;width:380px;height:12px;border:1px solid #34beed}#archiveFill{height:12px;background:#34beed;width:0}#archiveMario{position:absolute;left:282px;top:204px;width:32px;height:32px}#archiveForm{display:none}#underButtonL,#underButtonR,#card01,#card02,#top,#help,#balanceInfo{cursor:pointer}</style>
+</head><body>
+<!--  -----------------------------------------------------  -->
+<!--  Copyright 2005-2014 Acer Cloud Technology, Inc.        -->
+<!--  All Rights Reserved.                                   -->
+<!-- -->
+<!--  This software contains confidential information and    -->
+<!--  trade secrets of Acer Cloud Technology, Inc.           -->
+<!--  Use, disclosure or reproduction is prohibited without  -->
+<!--  the prior express written permission of Acer Cloud     -->
+<!--  Technology, Inc.                                       -->
+<!--  -----------------------------------------------------  -->
+<div id="constElements">
+<div id="tophelpshadow"><img height="75" src="/archive-shop/assets/images/banner/top_help_shadow01.gif" width="132"/></div>
+<div id="help">
+<img border="0" height="55" id="ManualImageID" name="ManualImage" src="/archive-shop/assets/images/banner/help_a.gif" width="52"/>
+<img border="0" height="55" id="ManualGrayImageID" src="/archive-shop/assets/images/banner/help_gray.gif" style="display:none" width="52"/>
+<img border="0" height="55" id="HelpSpacer" name="HelpSpacer" src="/archive-shop/assets/images/spacer.gif" style="position:absolute; top:0px; left:0px; display:none" width="52"/>
+</div>
+<div id="top">
+<img border="0" height="55" id="TopImageID" name="TopImage" src="/archive-shop/assets/images/banner/top_a.gif" width="52"/>
+<img border="0" height="55" id="TopGrayImageID" src="/archive-shop/assets/images/banner/top_gray.gif" style="display:none" width="52"/>
+<img border="0" height="55" id="MainSpacer" name="MainSpacer" src="/archive-shop/assets/images/spacer.gif" style="position:absolute; top:0px; left:0px; display:none" width="52"/>
+</div>
+<div class="dot" id="line01">･･･････････････････････････････････････････････････････････&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;･･･</div>
+<div class="dot" id="line02">･･･････････････････････････････････････････････････････････････････････････</div>
+<div class="dot" id="upperLineLong" style="display:none">･･･････････････････････････････････････････････････････････････････････････</div>
+<div id="balanceInfo">
+
+<img border="0" height="55" id="PointSpacer" name="PointSpacer" src="/archive-shop/assets/images/spacer.gif" style="position:absolute; top:376px; left:239px; z-index:20;" width="130"/>
+<div id="Wiipoint">
+<div align="center" class="buttonTextBlackM">Wii Points</div>
+</div>
+<div class="wiiPoint" id="point"><span id="currentBalance"></span></div>
+</div>
+</div>
+<!--  -----------------------------------------------------  -->
+<!--  Copyright 2005-2014 Acer Cloud Technology, Inc.        -->
+<!--  All Rights Reserved.                                   -->
+<!-- -->
+<!--  This software contains confidential information and    -->
+<!--  trade secrets of Acer Cloud Technology, Inc.           -->
+<!--  Use, disclosure or reproduction is prohibited without  -->
+<!--  the prior express written permission of Acer Cloud     -->
+<!--  Technology, Inc.                                       -->
+<!--  -----------------------------------------------------  -->
+
+<div id="underButtonL" style="display:none">
+<div class="buttonBannerShadow" id="underbannershadowL">
+<img height="75" src="/archive-shop/assets/images/banner/under_banner_shadow.gif" width="211"/>
+</div>
+<div class="buttonBanner" id="underbannerL">
+<img height="55" id="underImgL" src="/archive-shop/assets/images/banner/under_banner_a.gif" width="187"/>
+</div>
+<div class="buttonSpacer" id="underspacerL">
+<a href="" id="underlinkL">
+<img border="0" height="55" id="underimageL" src="/archive-shop/assets/images/spacer.gif" width="187"/>
+</a>
+</div>
+<div align="center" class="buttonTextBlackM buttonWord" id="underwordL">
+</div>
+</div>
+<div id="underButtonR" style="display:none">
+<div class="buttonBannerShadow" id="underbannershadowR">
+<img height="75" src="/archive-shop/assets/images/banner/under_banner_shadow.gif" width="211"/>
+</div>
+<div class="buttonBanner" id="underbannerR">
+<img height="55" id="underImgR" src="/archive-shop/assets/images/banner/under_banner_a.gif" width="187"/>
+</div>
+<div class="buttonSpacer" id="underspacerR">
+<a href="" id="underlinkR">
+<img border="0" height="55" id="underimageR" src="/archive-shop/assets/images/spacer.gif" width="187"/>
+</a>
+</div>
+<div align="center" class="buttonTextBlackM buttonWord" id="underwordR">
+</div>
+</div>
+<div id="underButton" style="display:none">
+<div class="buttonBannerShadow" id="underbannershadow">
+<img height="75" src="/archive-shop/assets/images/banner/under_banner_shadow.gif" width="211"/></div>
+<div class="buttonBanner" id="underbanner">
+<img height="55" id="underImg" src="/archive-shop/assets/images/banner/under_banner_a.gif" width="187"/></div>
+<div class="buttonSpacer" id="underspacer">
+<a href="" id="underlink">
+<img border="0" height="55" id="underimage" src="/archive-shop/assets/images/spacer.gif" width="187"/>
+</a>
+</div>
+<div align="center" class="buttonTextBlackM buttonWord" id="underword"></div>
+</div>
+
+<div id="sdErrorDiv">
+<!--  -----------------------------------------------------  -->
+<!--  Copyright 2005-2014 Acer Cloud Technology, Inc.        -->
+<!--  All Rights Reserved.                                   -->
+<!-- -->
+<!--  This software contains confidential information and    -->
+<!--  trade secrets of Acer Cloud Technology, Inc.           -->
+<!--  Use, disclosure or reproduction is prohibited without  -->
+<!--  the prior express written permission of Acer Cloud     -->
+<!--  Technology, Inc.                                       -->
+<!--  -----------------------------------------------------  -->
+<div align="left" class="warningRed" id="errorCodeText" style="display:none">
+    Error Code: <span id="errorCodePlaceholder"></span></div>
+<div align="left" class="contentsRedM" id="errorText" style="display:none">
+<span id="errorTextPlaceholder"></span>
+</div></div>
+<div id="text01-01">
+<div align="left" class="titleBlackL"><span id="heading">Download Confirmation</span></div>
+</div>
+<div id="confirmframe">
+<div id="goodsconfirmation"><img height="225" src="/archive-shop/assets/images/banner/goods_confirmation.gif" width="537"/></div>
+<div id="text03-01">
+<div align="center" class="catalogTitleBlack_01">
+<div align="right">Current Wii Points:</div>
+</div>
+</div>
+<div id="text04-01">
+<div align="center" class="contentsRedM">
+<div align="right">Wii Points to Download:</div>
+</div>
+</div>
+<div id="MsgWithoutSD">
+<div id="text06-01">
+<div align="center" class="catalogTitleBlack_01">
+<div align="right">Open Blocks:</div>
+</div>
+</div>
+<div id="text07-01">
+<div align="center" class="contentsRedM">
+<div align="right">
+    	Blocks to Download:</div>
+</div>
+</div>
+<div id="text08-01">
+<div align="center" class="catalogTitleBlack_01">
+<div align="right">
+    	Blocks after Download:</div>
+</div>
+</div>
+<div id="confirmation">
+<div align="center"><span class="headerBlueL" id="confirmationMsg"></span></div>
+</div>
+</div>
+
+<div id="text05-01">
+<div align="center" class="catalogTitleBlack_01">
+<div align="right">Wii Points after Download:</div>
+</div>
+</div>
+<div id="pointcost01">
+<div align="right" class="catalogTitleBlack_01"></div>
+</div>
+<div id="pointword02">
+<div align="right" class="contentsRedM"></div>
+</div>
+<div id="pointword03">
+<div align="right" class="catalogTitleBlack_01"></div>
+</div>
+<div id="blockcost02">
+<div align="right" class="contentsRedM"></div>
+</div>
+<div id="blockcost01">
+<div align="right" class="catalogTitleBlack_01"></div>
+</div>
+<div id="blockcost03">
+<div align="right" class="catalogTitleBlack_01"></div>
+</div>
+<div id="pointword01">
+<div align="center">
+<div align="center" class="catalogTitleBlack_01">Wii Points</div>
+</div>
+</div>
+<div id="points02">
+<div align="center">
+<div align="center" class="contentsRedM">Wii Points</div>
+</div>
+</div>
+<div id="pointos03">
+<div align="center">
+<div align="center" class="catalogTitleBlack_01">Wii Points</div>
+</div>
+</div>
+<div id="blockword01">
+<div align="center" class="catalogTitleBlack_01">Blocks</div>
+</div>
+<div id="blockword02">
+<div align="center" class="contentsRedM">Blocks</div>
+</div>
+<div id="blockword03">
+<div align="center" class="catalogTitleBlack_01">Blocks</div>
+</div>
+<div id="text02-01">
+<div align="center">
+<div align="left" class="buttonTextWhiteS_01" id="BuyMsg">
+      Downloading this software requires 0 Wii Points and uses 303.375 blocks in the Wii system memory.</div>
+</div>
+</div>
+<div id="TitleName1stline" nowrap="" style="overflow:hidden">
+<div align="center" class="contentsBlueM">{{.Name}}</div>
+</div>
+</div>
+<!--  -----------------------------------------------------  -->
+<!--  Copyright 2005-2014 Acer Cloud Technology, Inc.        -->
+<!--  All Rights Reserved.                                   -->
+<!-- -->
+<!--  This software contains confidential information and    -->
+<!--  trade secrets of Acer Cloud Technology, Inc.           -->
+<!--  Use, disclosure or reproduction is prohibited without  -->
+<!--  the prior express written permission of Acer Cloud     -->
+<!--  Technology, Inc.                                       -->
+<!--  -----------------------------------------------------  -->
+<div id="sdErrorNoSizeDiv" style="position:absolute; left:36px; top:88px; width:540px; height:179px; z-index:37; display:none">
+<div align="center">
+<div align="center" class="contentsBlackM"><table height="100%"><tr><td align="left" valign="middle"><span id="sdErrorNoSizeDivMsg"></span></td></tr></table></div>
+</div>
+</div>
+
+<form id="archiveForm" action="{{.Action}}" method="post"><input type="hidden" name="csrf" value="{{.CSRF}}"></form><script>var archiveShop={{.}};</script><script src="/archive-shop/mario.js"></script><script src="/archive-shop/checkout.js?v=2"></script></body></html>

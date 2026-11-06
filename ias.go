@@ -62,6 +62,11 @@ func checkRegistration(e *Envelope) {
 
 	// Formulate our response
 	e.AddKVNode("OriginalSerialNumber", serialNo)
+	// The console fills ECDeviceInfo.accountCountry and extAccountId from this
+	// reply. Without them a registered console can still report "device is not
+	// registered" (-4042) when a purchase starts.
+	e.AddKVNode("Country", "DE")
+	e.AddKVNode("ExtAccountId", "")
 
 	if err != nil {
 		// We're either unregistered, or a database error occurred.
@@ -95,10 +100,10 @@ func getRegistrationInfo(e *Envelope) {
 	e.AddKVNode("Currency", "POINTS")
 }
 
-func getWhitelistedSerialNumbers() []string {
+func getWhitelistedSerialNumbers() ([]string, error) {
 	file, err := os.Open("whitelist.txt")
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	defer file.Close()
 
@@ -113,10 +118,24 @@ func getWhitelistedSerialNumbers() []string {
 
 	// Check for errors during scanning
 	if err = scanner.Err(); err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return sns
+	return sns, nil
+}
+
+func serialWhitelisted(serialNumber string) error {
+	if !whitelistEnabled {
+		return nil
+	}
+	sns, err := getWhitelistedSerialNumbers()
+	if err != nil {
+		return err
+	}
+	if !slices.Contains(sns, serialNumber) {
+		return errors.New("console is not whitelisted")
+	}
+	return nil
 }
 
 func syncRegistration(e *Envelope) {
@@ -128,18 +147,21 @@ func syncRegistration(e *Envelope) {
 	err := user.Scan(&accountId, &deviceToken, &serialNumber)
 	if err != nil {
 		e.Error(7, "An error occurred querying the database.", err)
+		return
 	}
 
-	if whitelistEnabled && !slices.Contains(getWhitelistedSerialNumbers(), serialNumber) {
-		// Since HTTP server runs on a separate Goroutine, this won't shut off the server,
-		// rather kill communication with the requesting console
-		panic(err)
+	if err = serialWhitelisted(serialNumber); err != nil {
+		e.Error(7, "this console is not allowed to use the shop", err)
+		return
 	}
 
 	e.AddKVNode("AccountId", strconv.FormatInt(accountId, 10))
 	e.AddKVNode("DeviceToken", deviceToken)
 	e.AddKVNode("DeviceTokenExpired", "false")
-	e.AddKVNode("Country", e.Country())
+	// Shroombrew currently serves the German catalog and account state.  Returning
+	// a different echoed country makes the original Shop client show its country
+	// migration screen before it can reach the storefront.
+	e.AddKVNode("Country", "DE")
 	e.AddKVNode("ExtAccountId", "")
 	e.AddKVNode("DeviceStatus", "R")
 }
@@ -167,10 +189,9 @@ func register(e *Envelope) {
 		return
 	}
 
-	if whitelistEnabled && !slices.Contains(getWhitelistedSerialNumbers(), serialNo) {
-		// Since HTTP server runs on a separate Goroutine, this won't shut off the server,
-		// rather kill communication with the requesting console
-		panic(err)
+	if err = serialWhitelisted(serialNo); err != nil {
+		e.Error(7, "this console is not allowed to use the shop", err)
+		return
 	}
 
 	// Validate given friend code.
@@ -180,7 +201,7 @@ func register(e *Envelope) {
 		return
 	}
 	if wiino.NWC24CheckUserID(userId) != 0 {
-		e.Error(7, "invalid friend code", err)
+		e.Error(7, "invalid friend code", errors.New("the console's friend code check failed"))
 		return
 	}
 
@@ -198,6 +219,20 @@ func register(e *Envelope) {
 		// It's okay if this isn't a PostgreSQL error, as perhaps other issues have come in.
 		if driverErr, ok := err.(*pgconn.PgError); ok {
 			if driverErr.Code == "23505" {
+				// A console whose ec.cfg was lost asks to register again. Give
+				// it the account and token it already owns instead of leaving
+				// it stuck on ErrorCode 7.
+				var existingAccount int64
+				var existingToken string
+				if qerr := pool.QueryRow(ctx, `SELECT account_id, device_token FROM userbase WHERE device_id=$1`, e.DeviceId()).Scan(&existingAccount, &existingToken); qerr == nil {
+					e.AddKVNode("AccountId", strconv.FormatInt(existingAccount, 10))
+					e.AddKVNode("DeviceToken", existingToken)
+					e.AddKVNode("DeviceTokenExpired", "false")
+					e.AddKVNode("Country", "DE")
+					e.AddKVNode("ExtAccountId", "")
+					e.AddKVNode("DeviceCode", deviceCode)
+					return
+				}
 				e.Error(7, "database error", errors.New("user already exists"))
 				return
 			}
@@ -211,7 +246,8 @@ func register(e *Envelope) {
 	e.AddKVNode("AccountId", strconv.FormatInt(accountId, 10))
 	e.AddKVNode("DeviceToken", deviceToken)
 	e.AddKVNode("DeviceTokenExpired", "false")
-	e.AddKVNode("Country", e.Country())
+	// Keep existing accounts on the same country as new registrations.
+	e.AddKVNode("Country", "DE")
 	// Optionally, one can send back DeviceCode and ExtAccountId to update on device.
 	// We send these back as-is regardless.
 	e.AddKVNode("ExtAccountId", "")

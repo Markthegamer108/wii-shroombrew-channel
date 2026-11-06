@@ -1,4 +1,4 @@
-//	Copyright (C) 2018-2020 CornierKhan1
+﻿//	Copyright (C) 2018-2020 CornierKhan1
 //
 //	WiiSOAP is SOAP Server Software, designed specifically to handle Wii Shop Channel SOAP.
 //
@@ -32,12 +32,16 @@ import (
 	"time"
 )
 
-var namespaceParse = regexp.MustCompile(`^urn:(.{3})\.wsapi\.broadon\.com/(.*)$`)
+var namespaceParse = regexp.MustCompile(`^urn:([a-z]{3})\.wsapi\.broadon\.com/([A-Za-z][A-Za-z0-9]*)$`)
 
 // parseAction interprets contents along the lines of "urn:ecs.wsapi.broadon.com/CheckDeviceStatus",
 // where "CheckDeviceStatus" is the action to be performed.
 func parseAction(original string) (string, string) {
 	// Intended to return the original string, the service's name and the name of the action.
+	original = strings.TrimSpace(original)
+	if len(original) >= 2 && original[0] == '"' && original[len(original)-1] == '"' {
+		original = original[1 : len(original)-1]
+	}
 	matches := namespaceParse.FindStringSubmatch(original)
 	if len(matches) != 3 {
 		// It seems like the passed action was not matched properly.
@@ -218,15 +222,90 @@ func parseNameValue(s string) (string, string) {
 	return strings.TrimSuffix(decoded[0], "\n"), decoded[1]
 }
 
+var unquotedAttrRegex = regexp.MustCompile(`([a-zA-Z0-9_:-]+)=\s*([^\s"'>]+)`)
+var xmlDeclVersionRegex = regexp.MustCompile(`<\?xml\s+version=\s*([0-9\.]+)\s*`)
+var xmlTagRegex = regexp.MustCompile(`<[^>]+>`)
+
+func sanitizeSOAPXML(raw string) string {
+	raw = strings.TrimSpace(raw)
+	raw = strings.TrimPrefix(raw, "\xef\xbb\xbf")
+
+	raw = xmlDeclVersionRegex.ReplaceAllString(raw, `<?xml version="${1}" `)
+
+	return xmlTagRegex.ReplaceAllStringFunc(raw, func(tag string) string {
+		tagBody := tag
+		tagClose := ""
+		if strings.HasSuffix(tagBody, "?>") {
+			tagBody = tagBody[:len(tagBody)-2]
+			tagClose = "?>"
+		} else if strings.HasSuffix(tagBody, "/>") {
+			tagBody = tagBody[:len(tagBody)-2]
+			tagClose = "/>"
+		} else if strings.HasSuffix(tagBody, ">") {
+			tagBody = tagBody[:len(tagBody)-1]
+			tagClose = ">"
+		}
+
+		fixedTag := unquotedAttrRegex.ReplaceAllStringFunc(tagBody, func(attr string) string {
+			parts := strings.SplitN(attr, "=", 2)
+			if len(parts) != 2 {
+				return attr
+			}
+			val := strings.TrimSpace(parts[1])
+			if len(val) == 0 || val[0] == '"' || val[0] == '\'' {
+				return attr
+			}
+			return parts[0] + `="` + val + `"`
+		})
+
+		return fixedTag + tagClose
+	})
+}
+
+func sniffActionFromXML(body string) (string, string) {
+	cleanXML := sanitizeSOAPXML(body)
+	doc, err := xmlquery.Parse(strings.NewReader(cleanXML))
+	if err == nil {
+		bodyNode := xmlquery.FindOne(doc, "//*[local-name()='Body']")
+		if bodyNode != nil {
+			for child := bodyNode.FirstChild; child != nil; child = child.NextSibling {
+				if child.Type == xmlquery.ElementNode {
+					name := child.Data
+					prefix := child.Prefix
+					if prefix == "" && strings.Contains(name, ":") {
+						parts := strings.SplitN(name, ":", 2)
+						prefix = parts[0]
+						name = parts[1]
+					}
+					if prefix != "" {
+						return strings.ToLower(prefix), name
+					}
+					return "ecs", name
+				}
+			}
+		}
+	}
+	return "", ""
+}
+
 // normalise parses a document, returning a document with only the request type's child nodes, stripped of prefix.
 func normalise(service string, action string, reader io.Reader) (*xmlquery.Node, error) {
-	doc, err := xmlquery.Parse(reader)
+	buf := new(strings.Builder)
+	_, err := io.Copy(buf, reader)
+	if err != nil {
+		return nil, err
+	}
+	cleanXML := sanitizeSOAPXML(buf.String())
+	doc, err := xmlquery.Parse(strings.NewReader(cleanXML))
 	if err != nil {
 		return nil, err
 	}
 
 	// Find the keys for this element named after the action.
 	result := doc.SelectElement("//" + service + ":" + action)
+	if result == nil {
+		result = doc.SelectElement("//" + action)
+	}
 	if result == nil {
 		return nil, errors.New("missing root node")
 	}

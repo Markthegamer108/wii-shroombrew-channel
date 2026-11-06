@@ -1,0 +1,221 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=608,initial-scale=1"><title>Wii Shop Channel</title>
+<link rel="stylesheet" href="/archive-shop/assets/css/oss.css"><link rel="stylesheet" href="/archive-shop/assets/css/error.css">
+<script src="/native-v2/sound.js"></script><script src="/archive-shop/assets/js/buttons.js"></script><script src="/archive-shop/assets/js/images.js"></script><style type="text/css">
+  /* B_08:  Caution Items */
+
+
+#text01-01 {
+	position:absolute;
+	left:29px;
+	top:28px;
+	width:442px;
+	height:28px;
+	z-index:32;
+}
+#text02-01 {
+	position:absolute;
+	left:64px;
+	top:142px;
+	width:480px;
+	height:18px;
+	z-index:37
+}
+#text03-01 {
+	position:absolute;
+	left:64px;
+	top:216px;
+	width:480px;
+	height:60px;
+	z-index:38;
+	line-height:20px;
+}
+#text04-01 {
+	position:absolute;
+	left:64px;
+	top:300px;
+	width:480px;
+	height:60px;
+	z-index:38;
+	line-height:20px;
+}
+#text04-02 {
+	position:absolute;
+	left:64px;
+	top:216px;
+	width:480px;
+	height:144px;
+	z-index:38;
+	line-height:20px;
+}
+#cautionArea {
+	position:absolute;
+	left:64px;
+	top:137px;
+	width:490px;
+	height:227px;
+	z-index:38;
+	line-height:20px;
+	overflow:auto;
+}
+#frame {
+	position:absolute;
+	left:34px;
+	top:84px;
+	width:540px;
+	height:275px;
+	z-index:27;
+}
+#GC {
+	position:absolute;
+	left:343px;
+	top:160px;
+	width:60px;
+	height:60px;
+	z-index:36;
+}
+#controller {
+	position:absolute;
+	left:64px;
+	top:164px;
+	width:480px;
+	height:51px;
+	z-index:35;
+}
+
+#TitleName1stline {
+	position:absolute;
+	left:64px;
+	top:87px;
+	width:480px;
+	overflow:hidden;
+	z-index:34
+}
+
+#TitleName2stline {
+	position:absolute;
+	left:64px;
+	top:110px;
+	width:480px;
+	z-index:33;
+}
+body {
+	background-repeat: no-repeat;
+}
+</style><style>@font-face{font-family:"Wii NTLG PGothic JPN Regular";src:url('/archive-shop/assets/font2.ttf')}html,body{width:608px;height:456px;margin:0;overflow:hidden}body{position:relative;font-family:"Wii NTLG PGothic JPN Regular",sans-serif}#TitleName1stline{white-space:nowrap;text-overflow:ellipsis}#archiveStatus{position:absolute;left:54px;top:180px;width:500px;text-align:center;font-size:18px;color:#323232}#archiveNote{position:absolute;left:54px;top:307px;width:500px;text-align:center;font-size:15px;color:#323232}#archiveMeter{position:absolute;left:114px;top:245px;width:380px;height:12px;border:1px solid #34beed}#archiveFill{height:12px;background:#34beed;width:0}#archiveMario{position:absolute;left:282px;top:204px;width:32px;height:32px}#archiveForm{display:none}#underButtonL,#underButtonR,#card01,#card02,#top,#help,#balanceInfo{cursor:pointer}</style>
+</head><body>
+<!--  -----------------------------------------------------  -->
+<!--  Copyright 2005-2014 Acer Cloud Technology, Inc.        -->
+<!--  All Rights Reserved.                                   -->
+<!-- -->
+<!--  This software contains confidential information and    -->
+<!--  trade secrets of Acer Cloud Technology, Inc.           -->
+<!--  Use, disclosure or reproduction is prohibited without  -->
+<!--  the prior express written permission of Acer Cloud     -->
+<!--  Technology, Inc.                                       -->
+<!--  -----------------------------------------------------  -->
+<div id="constElements">
+<div id="tophelpshadow"><img height="75" src="/archive-shop/assets/images/banner/top_help_shadow01.gif" width="132"/></div>
+<div id="help">
+<img border="0" height="55" id="ManualImageID" name="ManualImage" src="/archive-shop/assets/images/banner/help_a.gif" width="52"/>
+<img border="0" height="55" id="ManualGrayImageID" src="/archive-shop/assets/images/banner/help_gray.gif" style="display:none" width="52"/>
+<img border="0" height="55" id="HelpSpacer" name="HelpSpacer" src="/archive-shop/assets/images/spacer.gif" style="position:absolute; top:0px; left:0px; display:none" width="52"/>
+</div>
+<div id="top">
+<img border="0" height="55" id="TopImageID" name="TopImage" src="/archive-shop/assets/images/banner/top_a.gif" width="52"/>
+<img border="0" height="55" id="TopGrayImageID" src="/archive-shop/assets/images/banner/top_gray.gif" style="display:none" width="52"/>
+<img border="0" height="55" id="MainSpacer" name="MainSpacer" src="/archive-shop/assets/images/spacer.gif" style="position:absolute; top:0px; left:0px; display:none" width="52"/>
+</div>
+<div class="dot" id="line01">･･･････････････････････････････････････････････････････････&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;･･･</div>
+<div class="dot" id="line02">･･･････････････････････････････････････････････････････････････････････････</div>
+<div class="dot" id="upperLineLong" style="display:none">･･･････････････････････････････････････････････････････････････････････････</div>
+<div id="balanceInfo">
+
+<img border="0" height="55" id="PointSpacer" name="PointSpacer" src="/archive-shop/assets/images/spacer.gif" style="position:absolute; top:376px; left:239px; z-index:20;" width="130"/>
+<div id="Wiipoint">
+<div align="center" class="buttonTextBlackM">Wii Points</div>
+</div>
+<div class="wiiPoint" id="point"><span id="currentBalance"></span></div>
+</div>
+</div>
+<!--  -----------------------------------------------------  -->
+<!--  Copyright 2005-2014 Acer Cloud Technology, Inc.        -->
+<!--  All Rights Reserved.                                   -->
+<!-- -->
+<!--  This software contains confidential information and    -->
+<!--  trade secrets of Acer Cloud Technology, Inc.           -->
+<!--  Use, disclosure or reproduction is prohibited without  -->
+<!--  the prior express written permission of Acer Cloud     -->
+<!--  Technology, Inc.                                       -->
+<!--  -----------------------------------------------------  -->
+
+<div id="underButtonL" style="display:none">
+<div class="buttonBannerShadow" id="underbannershadowL">
+<img height="75" src="/archive-shop/assets/images/banner/under_banner_shadow.gif" width="211"/>
+</div>
+<div class="buttonBanner" id="underbannerL">
+<img height="55" id="underImgL" src="/archive-shop/assets/images/banner/under_banner_a.gif" width="187"/>
+</div>
+<div class="buttonSpacer" id="underspacerL">
+<a href="" id="underlinkL">
+<img border="0" height="55" id="underimageL" src="/archive-shop/assets/images/spacer.gif" width="187"/>
+</a>
+</div>
+<div align="center" class="buttonTextBlackM buttonWord" id="underwordL">
+</div>
+</div>
+<div id="underButtonR" style="display:none">
+<div class="buttonBannerShadow" id="underbannershadowR">
+<img height="75" src="/archive-shop/assets/images/banner/under_banner_shadow.gif" width="211"/>
+</div>
+<div class="buttonBanner" id="underbannerR">
+<img height="55" id="underImgR" src="/archive-shop/assets/images/banner/under_banner_a.gif" width="187"/>
+</div>
+<div class="buttonSpacer" id="underspacerR">
+<a href="" id="underlinkR">
+<img border="0" height="55" id="underimageR" src="/archive-shop/assets/images/spacer.gif" width="187"/>
+</a>
+</div>
+<div align="center" class="buttonTextBlackM buttonWord" id="underwordR">
+</div>
+</div>
+<div id="underButton" style="display:none">
+<div class="buttonBannerShadow" id="underbannershadow">
+<img height="75" src="/archive-shop/assets/images/banner/under_banner_shadow.gif" width="211"/></div>
+<div class="buttonBanner" id="underbanner">
+<img height="55" id="underImg" src="/archive-shop/assets/images/banner/under_banner_a.gif" width="187"/></div>
+<div class="buttonSpacer" id="underspacer">
+<a href="" id="underlink">
+<img border="0" height="55" id="underimage" src="/archive-shop/assets/images/spacer.gif" width="187"/>
+</a>
+</div>
+<div align="center" class="buttonTextBlackM buttonWord" id="underword"></div>
+</div>
+
+<div id="text01-01">
+<div align="left" class="titleBlackL"><span id="B08headingMessage"></span></div>
+</div>
+<div id="frame">
+<div align="center"><img height="280" src="/archive-shop/assets/images/banner/Purchasing_frame01.gif" width="500"> </img></div>
+</div>
+<div id="TitleName1stline" nowrap="">
+<div align="center" class="contentsBlueM">{{.Name}}</div>
+</div>
+<div id="text02-01">
+<div align="center">
+<div align="center" class="contentsBlueS_01">Please note the following when downloading this software:</div>
+</div>
+</div>
+<div align="center" id="controller">
+<img height="51" src="/archive-shop/assets/images/banner/B_08_RvlCtrl.gif" width="68"/>
+</div>
+<div id="text03-01">
+<div align="center">
+<div align="left" class="contentsBlackS">{{.Controllers}}</div>
+</div>
+</div>
+<div id="text04-01">
+<div align="center">
+<div align="left" class="contentsBlackS"></div>
+</div>
+</div>
+<form id="archiveForm" action="{{.Action}}" method="post"><input type="hidden" name="csrf" value="{{.CSRF}}"></form><script>var archiveShop={{.}};</script><script src="/archive-shop/mario.js"></script><script src="/archive-shop/checkout.js?v=2"></script></body></html>

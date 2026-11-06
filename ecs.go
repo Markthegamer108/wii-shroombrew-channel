@@ -22,12 +22,15 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
-	"fmt"
+	"github.com/Markthegamer108/wii-shroombrew-channel/internal/channelpkg"
 	v1Ticket "github.com/OpenShopChannel/V1TicketGenerator"
 	"github.com/wii-tools/wadlib"
 	"log"
 	"math"
+	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -101,21 +104,19 @@ func listETickets(e *Envelope) {
 			return
 		}
 
-		app, err := GetOSCApp(titleId)
-		if err != nil {
-			e.Error(2, "an error has occurred retrieving app metadata", err)
-			return
+		// Report the version of the package actually installed. Synthesized
+		// channels carry a raised TMD version so consoles replace an older
+		// Open Shop Channel release. Titles without a stored package cannot be
+		// reissued, so they are left out rather than failing the whole list.
+		manifest, manifestErr := channelpkg.Load("./channels", strings.ToLower(titleId))
+		if manifestErr != nil {
+			continue
 		}
-
-		if app == nil {
-			// Quite possibly an app was de-listed?
-			e.Error(2, "title does not exist", nil)
-			return
-		}
+		version := int(manifest.Version)
 
 		e.AddCustomType(Tickets{
 			TitleId: titleId,
-			Version: app.Shop.Version,
+			Version: version,
 
 			// We do not support migration, ticket IDs, or revocation.
 			TicketId:     "0",
@@ -181,6 +182,7 @@ func purchaseTitle(e *Envelope) {
 	ticketStruct.UpdateTitleKey(contentAesKey)
 
 	version := 0
+	certificateChain := wadlib.CertChainTemplate
 	if titleId == WiinoMaServiceTitleID {
 		// Wii no Ma needs the ticket to be in the v1 ticket format.
 		// Update the ticket to reflect that.
@@ -261,25 +263,30 @@ func purchaseTitle(e *Envelope) {
 
 		ticket = bytes.NewBuffer(newTicket)
 	} else {
-		// Validate that this title exists.
-		app, err := GetOSCApp(titleId)
-		if err != nil {
-			e.Error(2, "an error has occurred retrieving app metadata", err)
+		// A catalog entry alone is not an installable package. Only issue the
+		// matching imported ticket after a validated package is available.
+		// Validation is local on purpose: the storefront already decided that
+		// this title is for sale, and hash-derived title IDs never exist in the
+		// live Open Shop Channel API.
+		packageID := strings.ToLower(titleId)
+		manifest, packageErr := channelpkg.Load("./channels", packageID)
+		if packageErr != nil {
+			e.Error(2, "native channel package is not available", nil)
 			return
 		}
 
-		if app == nil {
-			e.Error(2, "title does not exist", nil)
+		version = int(manifest.Version)
+		packageTicket, readErr := os.ReadFile(filepath.Join("./channels", packageID, "ticket.bin"))
+		if readErr != nil {
+			e.Error(2, "channel ticket is unavailable", nil)
 			return
 		}
-
-		version = app.Shop.Version
-
-		err = binary.Write(ticket, binary.BigEndian, ticketStruct)
-		if err != nil {
-			e.Error(2, "failed to create ticket", err)
+		certificateChain, readErr = os.ReadFile(filepath.Join("./channels", packageID, "certs.bin"))
+		if readErr != nil || len(certificateChain) == 0 {
+			e.Error(2, "channel certificates are unavailable", nil)
 			return
 		}
+		ticket = bytes.NewBuffer(packageTicket)
 	}
 
 	// Associate the given title ID with the user.
@@ -287,10 +294,11 @@ func purchaseTitle(e *Envelope) {
 	if err != nil {
 		log.Printf("unexpected error purchasing: %v", err)
 		e.Error(2, "error purchasing", nil)
+		return
 	}
 
 	// The returned ticket is expected to have two other certificates associated.
-	ticketString := b64(append(ticket.Bytes(), wadlib.CertChainTemplate...))
+	ticketString := b64(append(ticket.Bytes(), certificateChain...))
 
 	e.AddCustomType(getBalance())
 	e.AddCustomType(Transactions{
@@ -311,8 +319,8 @@ func purchaseTitle(e *Envelope) {
 
 	e.AddKVNode("ETickets", ticketString)
 	// Two cert types must be present.
-	e.AddKVNode("Certs", b64(wadlib.CertChainTemplate))
-	e.AddKVNode("Certs", b64(wadlib.CertChainTemplate))
+	e.AddKVNode("Certs", b64(certificateChain))
+	e.AddKVNode("Certs", b64(certificateChain))
 	e.AddKVNode("TitleId", titleId)
 }
 
@@ -402,15 +410,15 @@ func listPurchaseHistory(e *Envelope) {
 	e.AddKVNode("ListResultTotalSize", strconv.Itoa(len(transactions)))
 }
 
-// genServiceUrl returns a URL with the given service against a configured URL.
-// Given a baseUrl of example.com and genServiceUrl("ias", "IdentityAuthenticationSOAP"),
-// it would return http://ias.example.com/ias/services/ias/IdentityAuthenticationSOAP.
+// genServiceUrl keeps every Shop service on the known-good storefront host.
+// The console learns these URLs from GetECConfig, so separate DNS records are
+// unnecessary and older clients only need to establish one compatible TLS path.
 func genServiceUrl(service string, path string) string {
-	return fmt.Sprintf("http://%s.%s/%s/services/%s", service, baseUrl, service, path)
+	return "https://oss-auth." + baseUrl + "/" + service + "/services/" + path
 }
 
 func getECConfig(e *Envelope) {
-	contentUrl := fmt.Sprintf("http://ccs.%s/ccs/download", baseUrl)
+	contentUrl := "https://oss-auth." + baseUrl + "/ccs/download"
 	e.AddKVNode("ContentPrefixURL", contentUrl)
 	e.AddKVNode("UncachedContentPrefixURL", contentUrl)
 	e.AddKVNode("SystemContentPrefixURL", contentUrl)
