@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"html"
+	"html/template"
 	"net/http"
 	"net/url"
 	"os"
@@ -35,22 +36,22 @@ func pointCardImage(lang string) string {
 
 // pointsResult turns the ?m= code the card form redirects with into the one
 // line message shown on the card page.
-func pointsResult(lang string, q url.Values) (string, bool) {
+func pointsResult(lang string, q url.Values) (template.HTML, bool) {
 	switch q.Get("m") {
 	case "ok":
-		return tl(lang, "c_ok", "n", strconv.Itoa(cardPoints)), false
+		return template.HTML(tl(lang, "c_ok", "n", strconv.Itoa(cardPoints))), false
 	case "err":
-		return tl(lang, "er_card_bad"), true
+		return template.HTML(tl(lang, "er_card_bad")), true
 	case "cap":
-		return tl(lang, "er_card_cap", "n", strconv.Itoa(walletCap)), true
+		return template.HTML(tl(lang, "er_card_cap", "n", strconv.Itoa(walletCap))), true
 	case "locked":
 		n, _ := strconv.Atoi(q.Get("n"))
 		if n < 1 || n > 3600 {
 			n = 60
 		}
-		return tl(lang, "er_locked", "m", strconv.Itoa((n+59)/60)), true
+		return template.HTML(tl(lang, "er_locked", "m", strconv.Itoa((n+59)/60))), true
 	case "fail":
-		return tl(lang, "er_generic"), true
+		return template.HTML(tl(lang, "er_generic")), true
 	}
 	return "", false
 }

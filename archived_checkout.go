@@ -26,9 +26,9 @@ type archivedCheckoutData struct {
 	// one-line result message (Flash) shown after a card is entered.
 	T        map[string]string
 	D        map[string]string // English -> translated text for the page script
-	Site     string
-	Flash    string
-	FlashBad bool
+	Site      string
+	Flash     template.HTML
+	FlashBad  bool
 	// Card is the Wii Points card artwork for the console's region.
 	Card string
 }
