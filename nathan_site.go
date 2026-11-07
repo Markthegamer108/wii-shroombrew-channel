@@ -995,6 +995,12 @@ func (s *storefront) classicSiteHandler(soap http.Handler) http.Handler {
 				return
 			}
 		}
+		// The community site is now one page; old per-page URLs redirect to it.
+		if strings.HasPrefix(filePath, "/community/") && strings.HasSuffix(filePath, ".html") && path.Base(filePath) != "index.html" {
+			name := strings.TrimSuffix(path.Base(filePath), ".html")
+			http.Redirect(w, r, "/community/#"+name, http.StatusMovedPermanently)
+			return
+		}
 		localPath := filepath.Join(nathanSiteRoot, filepath.FromSlash(strings.TrimPrefix(filePath, "/")))
 		info, err := os.Stat(localPath)
 		if err != nil || info.IsDir() {
