@@ -609,13 +609,16 @@ func classicCatalogFallbackJS() []byte {
 var retries=0;
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function value(name){var q=location.search.substring(1).split('&');for(var i=0;i<q.length;i++){var p=q[i].split('=');if(decodeURIComponent(p[0])==name)return decodeURIComponent((p[1]||'').replace(/\+/g,' '));}return '';}
+// The main menu's tiles link with the archived parameters (vc=true,
+// platform=WiiWare, platform=Wii Channels in each language); map them to sections.
+function section(){var c=value('category');if(c)return c;if(value('vc')=='true')return 'Virtual Console';var p=value('platform').toLowerCase();if(p.indexOf('wiiware')>=0)return 'WiiWare';if(p.indexOf('virtual')>=0)return 'Virtual Console';if(/channel|kanal|cha.ne|canal/.test(p))return 'Channels';return '';}
 function pageURL(number){var old=location.search.substring(1).split('&');var kept=[];for(var j=0;j<old.length;j++){if(old[j]&&old[j].split('=')[0]!='p')kept.push(old[j]);}kept.push('p='+number);return '/oss/serv/B_04.html?'+kept.join('&');}
-function secURL(section){var old=location.search.substring(1).split('&');var kept=[];for(var j=0;j<old.length;j++){if(old[j]&&old[j].split('=')[0]!='category'&&old[j].split('=')[0]!='genre'&&old[j].split('=')[0]!='p')kept.push(old[j]);}kept.push('category='+encodeURIComponent(section));kept.push('p=1');return '/oss/serv/B_04.html?'+kept.join('&');}
-function subURL(section,genre){var old=location.search.substring(1).split('&');var kept=[];for(var j=0;j<old.length;j++){var kv=old[j];if(!kv)continue;var k=kv.split('=')[0];if(k!='category'&&k!='genre'&&k!='p')kept.push(kv);}if(section)kept.push('category='+encodeURIComponent(section));if(genre)kept.push('genre='+encodeURIComponent(genre));kept.push('p=1');return '/oss/serv/B_04.html?'+kept.join('&');}
+function secURL(section){var old=location.search.substring(1).split('&');var kept=[];for(var j=0;j<old.length;j++){var k0=old[j].split('=')[0];if(old[j]&&k0!='category'&&k0!='genre'&&k0!='p'&&k0!='platform'&&k0!='vc')kept.push(old[j]);}kept.push('category='+encodeURIComponent(section));kept.push('p=1');return '/oss/serv/B_04.html?'+kept.join('&');}
+function subURL(section,genre){var old=location.search.substring(1).split('&');var kept=[];for(var j=0;j<old.length;j++){var kv=old[j];if(!kv)continue;var k=kv.split('=')[0];if(k!='category'&&k!='genre'&&k!='p'&&k!='platform'&&k!='vc')kept.push(kv);}if(section)kept.push('category='+encodeURIComponent(section));if(genre)kept.push('genre='+encodeURIComponent(genre));kept.push('p=1');return '/oss/serv/B_04.html?'+kept.join('&');}
 function subNav(subs,genre,section){var h='';for(var j=0;j<subs.length;j++){var name=subs[j][0],val=subs[j][1];var active=(genre==val)?'#e60000':'#000';h+='<a href="'+subURL(section,val)+'" style="color:'+active+';text-decoration:underline;margin-right:10px" onclick="wiiSelectSound();shroomNavigate(this.href);return false">'+name+'</a>';}return h;}
 function nav(){
  var info=document.getElementById('listinfo');if(!info)return;
- var cur=value('category');
+ var cur=section();
  var genre=value('genre');
  var html='';
  if(cur==''){
@@ -655,7 +658,7 @@ function render(){
  var frame=document.getElementById('catalogFrame');if(!frame||typeof gameslist=='undefined'){if(retries++<20)setTimeout(render,250);return;}
  nav();
  var page=parseInt(value('p')||'1',10);if(!page||page<1)page=1;
- var title=value('title').toLowerCase();var genre=value('genre').toLowerCase();var cat=value('category').toLowerCase();var publisher=value('publisher').toLowerCase();var list=[];var i;
+ var title=value('title').toLowerCase();var genre=value('genre').toLowerCase();var cat=section().toLowerCase();var publisher=value('publisher').toLowerCase();var list=[];var i;
  function matchGenre(g){
   g=String(g||'').toLowerCase();
   if(genre){
@@ -668,7 +671,7 @@ function render(){
   if(cat){
    if(cat=='virtual console')return g=='virtual console'||g=='emulators';
    if(cat=='channels')return g=='channels'||g=='games'||g=='utilities'||g=='media'||g=='demos';
-   if(cat=='wiware')return g=='wiware';
+   if(cat=='wiiware')return g=='wiiware';
    if(cat=='dlc')return g=='dlc';
   }
   return true;
@@ -680,9 +683,12 @@ function render(){
   if(publisher&&String(game.publisher||'').toLowerCase().indexOf(publisher)<0)continue;
   list.push(game);
  }
- if(value('order')=='new')list.sort(function(a,b){return (b.releaseUnix||0)-(a.releaseUnix||0);});
+ // A section lists its own licensed titles (the real Wii channels, the real
+ // Virtual Console games) before the homebrew that shares it.
+ function rank(g){var x=String(g.genre||'').toLowerCase();return x==cat?0:1;}
+ if(value('order')=='new')list.sort(function(a,b){return (rank(a)-rank(b))||((b.releaseUnix||0)-(a.releaseUnix||0));});
  else if(genre)list.sort(function(a,b){return String(a.title1||'').toLowerCase()<String(b.title1||'').toLowerCase()?-1:1;});
- else list.sort(function(a,b){var g=String(a.genre||'').toLowerCase()<String(b.genre||'').toLowerCase()?-1:1;return g?g:(String(a.title1||'').toLowerCase()<String(b.title1||'').toLowerCase()?-1:1);});
+ else list.sort(function(a,b){var r=rank(a)-rank(b);if(r)return r;var g=String(a.genre||'').toLowerCase()<String(b.genre||'').toLowerCase()?-1:1;return g?g:(String(a.title1||'').toLowerCase()<String(b.title1||'').toLowerCase()?-1:1);});
  var pages=Math.max(1,Math.ceil(list.length/3));if(page>pages)page=pages;
  var first=(page-1)*3;var html='';
  for(i=0;i<3&&first+i<list.length;i++){

@@ -74,7 +74,7 @@ func TestSeasonWindow(t *testing.T) {
 		want bool
 	}{
 		{d(time.November, 30), false}, {d(time.December, 1), true}, {d(time.December, 25), true},
-		{d(time.December, 26), true}, {d(time.December, 27), false}, {d(time.January, 5), false}, {d(time.July, 4), false},
+		{d(time.December, 26), true}, {d(time.December, 31), true}, {d(time.January, 1), false}, {d(time.January, 5), false}, {d(time.July, 4), false},
 	} {
 		if got, _ := seasonActive(c.t); got != c.want {
 			t.Errorf("seasonActive(%v)=%v want %v", c.t.Format("Jan 2"), got, c.want)

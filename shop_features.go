@@ -108,7 +108,7 @@ func (s *storefront) featureHandler(next http.Handler) http.Handler {
 			s.connectingPage(w, r)
 		case r.URL.Path == "/language":
 			s.setLanguage(w, r)
-		case r.URL.Path == "/shroombrew-season.js":
+		case r.URL.Path == "/shroombrew-season.js" || r.URL.Path == "/shroombrew-fx.js":
 			s.seasonScript(w, r)
 		case r.URL.Path == "/points":
 			s.freePointsPage(w, r)
@@ -124,7 +124,7 @@ func (s *storefront) featureHandler(next http.Handler) http.Handler {
 				return
 			}
 			app = s.regionApp(app, r)
-			if r.Method == http.MethodGet && s.hasNativeSDPackage(app) {
+			if r.Method == http.MethodGet && isWiiClient(r) && s.hasNativeSDPackage(app) {
 				// The title page picks the destination: the Wii System
 				// Memory / SD Card choice for channels, or the SD
 				// installer for packages that are one.
@@ -139,6 +139,8 @@ func (s *storefront) featureHandler(next http.Handler) http.Handler {
 				return
 			}
 			http.Redirect(w, r, "/wii-install/title/"+classicTitleIDForApp(app), http.StatusSeeOther)
+		case strings.HasPrefix(r.URL.Path, "/download-file/"):
+			s.ownedFileDownload(w, r)
 		case strings.HasPrefix(r.URL.Path, "/shop-download/"):
 			s.downloadFlow(w, r)
 		case r.URL.Path == "/wii-install/start" || r.URL.Path == "/api/install/start" || strings.HasPrefix(r.URL.Path, "/api/install/native/"):
@@ -235,6 +237,25 @@ func (s *storefront) checkout(w http.ResponseWriter, r *http.Request, app catalo
 			http.Redirect(w, r, "/points?return="+url.QueryEscape(r.URL.Path+"?confirm=1"), 303)
 			return
 		}
+		// A PC browser cannot use the console's installer: it gets the WAD or
+		// homebrew ZIP as an ordinary file in its Downloads folder.
+		if !isWiiClient(r) {
+			if _, ok := s.downloadTarget(s.regionApp(app, r)); !ok {
+				writeArchivedCheckout(w, r, archivedCheckoutData{Page: "B_10", Name: app.Name, Balance: points, Back: r.URL.Path, Message: "The package is unavailable. No points were charged."})
+				return
+			}
+			if err = purchaseOnce(r.Context(), id, app.Slug, price); err != nil {
+				http.Error(w, "Not enough points or wallet unavailable. Add points and retry.", 409)
+				return
+			}
+			recordPurchaseVersion(r.Context(), id, app.Slug, app.Shop.Version)
+			if points, err = walletBalance(id); err != nil {
+				http.Error(w, "Wallet unavailable", 500)
+				return
+			}
+			writeArchivedCheckout(w, r, archivedCheckoutData{Page: "B_10", Mode: "pc", Name: app.Name, Balance: points, Action: "/download-file/" + app.Slug, FSBlocks: s.channelFSBlocks(app), Back: "/oss/serv/W_03.html"})
+			return
+		}
 		// Apps that fit a channel are downloaded by the Shop's own native
 		// installer. The channel is built here, before any points are taken.
 		if canSynthesize(app) {
@@ -284,6 +305,33 @@ func (s *storefront) checkout(w http.ResponseWriter, r *http.Request, app catalo
 		data.Remaining = 0
 	}
 	writeArchivedCheckout(w, r, data)
+}
+
+// ownedFileDownload sends a PC browser to the WAD or homebrew ZIP of a title
+// its wallet has bought, so the browser saves it to the Downloads folder.
+func (s *storefront) ownedFileDownload(w http.ResponseWriter, r *http.Request) {
+	app, ok := s.bySlug[strings.TrimPrefix(r.URL.Path, "/download-file/")]
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	id, err := walletID(w, r)
+	if err != nil {
+		http.Error(w, "Wallet unavailable", 500)
+		return
+	}
+	var owned bool
+	if err = pool.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM shroombrew_purchases WHERE wallet=$1 AND slug=$2)`, id, app.Slug).Scan(&owned); err != nil || !owned {
+		http.Redirect(w, r, "/wii-install/title/"+classicTitleIDForApp(app), http.StatusSeeOther)
+		return
+	}
+	target, ok := s.downloadTarget(s.regionApp(app, r))
+	if !ok {
+		http.Error(w, "Download unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	pool.Exec(r.Context(), `UPDATE shroombrew_purchases SET delivered_at=now() WHERE wallet=$1 AND slug=$2`, id, app.Slug)
+	http.Redirect(w, r, target, http.StatusFound)
 }
 
 func (s *storefront) ownedJob(r *http.Request, id, wallet string) (*installJob, catalogApp, bool) {

@@ -164,11 +164,11 @@ func normalizeFriendCode(in string) string {
 	return string(b[0:4]) + "-" + string(b[4:8]) + "-" + string(b[8:12])
 }
 
-// seasonActive reports whether the Christmas window is open. The shop music
-// for the season only plays between 1 and 26 December (UTC).
+// seasonActive reports whether the Christmas window is open: all of December
+// (UTC), when the shop plays its Christmas track and snow falls.
 func seasonActive(t time.Time) (bool, string) {
 	t = t.UTC()
-	if t.Month() == time.December && t.Day() >= 1 && t.Day() <= 26 {
+	if t.Month() == time.December {
 		return true, "christmas"
 	}
 	return false, ""
@@ -849,14 +849,14 @@ func (s *storefront) communityAPI(w http.ResponseWriter, r *http.Request) {
 
 // ---- seasonal script --------------------------------------------------------
 
+// seasonScript serves shop/fx.js (music, December snow, reversed-text day and
+// their settings) year round. The community pages on GitHub Pages load it as
+// /shroombrew-season.js, the web shop as /shroombrew-fx.js; the script itself
+// checks the date.
 func (s *storefront) seasonScript(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-store")
-	if active, _ := seasonActive(time.Now()); !active {
-		_, _ = w.Write([]byte("/* Shroombrew: not in season */\n"))
-		return
-	}
-	data, err := shopFiles.ReadFile("shop/season.js")
+	w.Header().Set("Cache-Control", "no-cache")
+	data, err := shopFiles.ReadFile("shop/fx.js")
 	if err != nil {
 		_, _ = w.Write([]byte("/* season script missing */\n"))
 		return

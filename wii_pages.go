@@ -25,6 +25,12 @@ func isWiiShopUA(r *http.Request) bool {
 	return strings.Contains(r.UserAgent(), "Wii Shop Channel/")
 }
 
+// isWiiClient reports a real console (the Shop channel or the Wii's Opera
+// browser); anything else is a PC or phone and gets ordinary file downloads.
+func isWiiClient(r *http.Request) bool {
+	return isWiiShopUA(r) || strings.Contains(r.UserAgent(), "Nintendo Wii")
+}
+
 // pointCardImage is the retail Wii Points Card the Add Wii Points page shows:
 // the console region's card, as the shop picked it (P_01_getRegionPic).
 func pointCardImage(r *http.Request) string {

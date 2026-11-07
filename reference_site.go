@@ -87,8 +87,11 @@ func referenceSiteHandler(root string, next http.Handler) http.Handler {
 			}
 			text = strings.ReplaceAll(text, "wiishopchannel.net/oss/serv/", r.Host+"/oss/serv/")
 			text = strings.ReplaceAll(text, `page.includes("wiishopchannel.net")`, `page.includes("`+r.Host+`")`)
-			// Seasonal tracks are scheduled by the shell's main.js, which swaps
-			// the BGM on the matching dates, so no extra script is injected here.
+			// Seasonal tracks are scheduled by the shell's main.js. Snow and the
+			// reversed-text day come from the shared effects script.
+			if requestPath == "/" && ext == ".html" {
+				text = strings.Replace(text, "</body>", `<script src="/shroombrew-fx.js"></script></body>`, 1)
+			}
 			w.Header().Set("Content-Type", mime.TypeByExtension(ext))
 			// Keep deployments fresh, including the shell's runtime state.
 			w.Header().Set("Cache-Control", "no-cache")

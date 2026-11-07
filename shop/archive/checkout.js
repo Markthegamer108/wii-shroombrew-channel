@@ -114,6 +114,17 @@
   var animation=new ShroomMarioDownload(document.body),finished=false;
   function readyActions(){text('archiveStatus',L('Your homebrew package is ready.'));text('archiveNote',L('Use Shroombrew Installer on your Wii, or')+' ');var zip=document.createElement('a');zip.href='#';zip.appendChild(document.createTextNode(L('download the ZIP instead.')));zip.onclick=function(){submit();return false;};el('archiveNote').appendChild(zip);button('R',L('Install on Wii'),function(){el('archiveForm').action='/shop-download/installer/'+encodeURIComponent(d.Job);submit();});}
   function finish(message,ready){if(finished)return;finished=true;text('archiveStatus',message);if(ready)animation.finish(readyActions);else animation.stop();}
+  if(d.Mode==='pc'){
+   // PC browser: play the shell's own download scene (the same one every
+   // title gets on wiishopchannel.net), then save the file to Downloads.
+   text('archiveStatus',L('Downloading software...'));text('archiveNote','');
+   var saved=false;
+   window.handleReportDownloadDone=function(){if(saved)return;saved=true;var f=document.createElement('iframe');f.style.display='none';f.src=d.Action;document.body.appendChild(f);text('rcvHead',L('You downloaded'));text('archiveStatus',L('Download successful!'));text('archiveNote',L('The file was saved to your Downloads folder.'));button('R','OK',function(){go(d.Back);});};
+   var shell=null;try{if(parent!==window&&typeof parent.download==='function')shell=parent;}catch(e){}
+   if(shell){animation.stop();shell.download(Math.max(1,Math.ceil((d.FSBlocks||8)/8)));}
+   else{var t=0,iv=setInterval(function(){t+=.05;animation.setProgress(t);if(t>=1){clearInterval(iv);animation.finish(window.handleReportDownloadDone);}},150);}
+   return;
+  }
   if(d.Mode==='installer'){
    animation.stop();text('rcvHead',L('Install to SD Card'));text('archiveStatus',L('Your install code: {code}',{code:d.Code}));
    var codeText=document.createElement('div');codeText.style.cssText='position:absolute;left:64px;top:200px;width:480px;font-size:18px;line-height:24px;text-align:center';codeText.appendChild(document.createTextNode(L('Press HOME, open the Homebrew Channel, and launch Shroombrew Installer. Enter this code within 15 minutes. Keep your SD card inserted.')));document.body.appendChild(codeText);
