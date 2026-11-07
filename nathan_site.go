@@ -642,6 +642,8 @@ function render(){
   if(cat){
    if(cat=='virtual console')return value('hb')=='1'?g=='emulators':g=='virtual console';
    if(cat=='wiiware'&&value('hb')=='1')return g=='games';
+   if(cat=='wiiware'&&value('genre')=='flash')return g.toLowerCase()=='flash';
+   if(cat=='wiiware'&&value('genre')=='flash')return g.toLowerCase()=='flash';
    if(cat=='channels')return g=='channels'||g=='games'||g=='utilities'||g=='media'||g=='demos';
    if(cat=='wiiware')return g=='wiiware';
    if(cat=='dlc')return g=='dlc';
