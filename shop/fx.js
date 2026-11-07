@@ -1,11 +1,19 @@
-/* Shroombrew seasonal effects, shared by the web shop (shop.shroombrew.org)
-   and the community site (shroombrew.org):
-     - December: falling snow
-     - 14 January ("The Mii Channel theme but it's reversed" day): reversed text
-     - shroombrew.org only: the shop's music (the same track the shop plays
-       today), an optional dark mode, and a settings panel for all of them.
+/* Shroombrew special days, shared by the web shop (shop.shroombrew.org) and
+   the community site (shroombrew.org). Each day that has its own track also
+   has its own look, in both places:
+     December      All I Want For Christmas Is You   falling snow
+     14 January    Mii Channel theme reversed        reversed text
+     30 January    Wii Shop Channel but Depressing   grey page and rain
+     9 February    Wii Shop Channel but it's ss      small-caps text, faded colour
+     1 April       wii theme but it is deranged      the page wobbles
+     5 May         made by a 6 year old              crayon colours, Comic Sans
+     26 June       Attentiion                        the page pulses on the beat
+     31 October    Mii Channel ... discordant        glitches that get worse
+   An effect and its switch only exist on its day. shroombrew.org also plays
+   the day's music and has dark mode; its settings sit behind the gear button.
+   The shop's Settings > Seasonal Effects page (S_16_6) uses shroomFX.
    Settings live in one cookie on .shroombrew.org, so a choice made on either
-   site applies to both. The shop's own Settings page (S_16_6) uses shroomFX. */
+   site applies to both. */
 (function () {
   if (window.shroomFX) return;
   var isShop = !!document.getElementById("mariocanvas") || /^shop\./.test(location.hostname);
@@ -17,9 +25,53 @@
   if (fx) now = new Date(+fx[1], +fx[2] - 1, +fx[3], 12);
   var month = now.getMonth(), day = now.getDate();
 
+  // What moves on each day: the page box on shroombrew.org, the two page
+  // frames in the shop (the shell scales #app itself, so leave that alone).
+  var MOVE = ".wrap,#frame,#otherframe";
+
+  // ---- the special days ------------------------------------------------------
+  // css goes into the top page; frameCss into every page, frames included.
+  var EFFECTS = [
+    { name: "snow", key: "s", label: "Snowflakes", note: "Falls throughout December.",
+      when: function () { return month === 11; },
+      start: function () { startParticles("snow"); }, stop: stopParticles },
+    { name: "reverse", key: "r", label: "Reversed text", note: "For the reversed Mii Channel theme.",
+      when: function () { return month === 0 && day === 14; },
+      start: startReverse, stop: stopReverse },
+    { name: "gloom", key: "g", label: "Grey and rain", note: "30 January, the day the Wii Shop Channel closed.",
+      when: function () { return month === 0 && day === 30; },
+      css: "html{filter:grayscale(1) brightness(.88)}",
+      start: function () { startParticles("rain"); }, stop: stopParticles },
+    { name: "smallcaps", key: "c", label: "ᴅᴇᴘʀᴇssɪɴɢ text", note: "For \"Wii Shop Channel but it's ss\".",
+      when: function () { return month === 1 && day === 9; },
+      css: "html{filter:grayscale(.65)}",
+      frameCss: "body,body *{font-variant:small-caps!important;text-transform:lowercase}" },
+    { name: "wobble", key: "w", label: "Deranged wobble", note: "April Fools' Day, for \"wii theme but it is deranged\".",
+      when: function () { return month === 3 && day === 1; },
+      css: "@keyframes sbWobble{0%,100%{transform:rotate(-1.2deg) skewX(1deg)}25%{transform:rotate(.8deg) skewY(-.6deg) scale(1.01)}50%{transform:rotate(1.4deg) skewX(-1.2deg)}75%{transform:rotate(-.6deg) skewY(.8deg) scale(.99)}}" +
+        MOVE + "{animation:sbWobble 5s ease-in-out infinite;transform-origin:50% 50%}" },
+    { name: "crayon", key: "k", label: "Crayon style", note: "Children's Day, for \"made by a 6 year old\".",
+      when: function () { return month === 4 && day === 5; },
+      css: "html{filter:saturate(2.2) hue-rotate(-12deg) contrast(1.05)}",
+      frameCss: "body,body *{font-family:\"Comic Sans MS\",\"Comic Neue\",\"Chalkboard SE\",\"Marker Felt\",cursive!important}" },
+    { name: "pulse", key: "p", label: "Beat pulse", note: "For \"Attentiion\" (Wii Shop x Charlie Puth).",
+      when: function () { return month === 5 && day === 26; },
+      css: "@keyframes sbPulse{0%,100%{transform:scale(1)}12%{transform:scale(1.015)}}" +
+        MOVE + "{animation:sbPulse .61s ease-out infinite;transform-origin:50% 50%}" },
+    { name: "glitch", key: "x", label: "Glitches", note: "Halloween, for the discordant Mii Channel music.",
+      when: function () { return month === 9 && day === 31; },
+      css: MOVE + "{transform:translate(var(--sbgx,0),var(--sbgy,0)) skewX(var(--sbgs,0deg));filter:hue-rotate(var(--sbgh,0deg)) invert(var(--sbgi,0))}",
+      start: startGlitch, stop: stopGlitch }
+  ];
+  function todays() {
+    var out = [];
+    for (var i = 0; i < EFFECTS.length; i++) if (EFFECTS[i].when()) out.push(EFFECTS[i]);
+    return out;
+  }
+
   // ---- settings ------------------------------------------------------------
-  var KEYS = { music: "m", snow: "s", reverse: "r", dark: "d" };
-  var OFF_BY_DEFAULT = { dark: true };
+  var KEYS = { music: "m", dark: "d" }, OFF_BY_DEFAULT = { dark: true };
+  for (var e = 0; e < EFFECTS.length; e++) KEYS[EFFECTS[e].name] = EFFECTS[e].key;
   function readCookie() {
     var m = /(?:^|;\s*)sbfx=([a-z0-9]*)/.exec(document.cookie);
     return m ? m[1] : "";
@@ -48,57 +100,128 @@
     if (month === 9 && day === 31) return ["theme1discordant"];
     return ["theme1", "theme2"];
   }
-  var isSnowDay, isReverseDay;
   function today() {
     if (!fx) { now = new Date(); month = now.getMonth(); day = now.getDate(); }
-    isSnowDay = month === 11;
-    isReverseDay = month === 0 && day === 14;
   }
-  today();
 
-  // ---- snow ----------------------------------------------------------------
-  var snowCanvas = null, snowTimer = null, flakes = [];
-  function startSnow() {
-    if (snowCanvas || !document.body) return;
-    snowCanvas = document.createElement("canvas");
-    snowCanvas.setAttribute("aria-hidden", "true");
-    snowCanvas.style.cssText = "position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:2147483000";
-    document.body.appendChild(snowCanvas);
-    var ctx = snowCanvas.getContext("2d"), w = 0, h = 0;
+  // ---- every page, frames included -------------------------------------------
+  // The shop shows its pages in iframes; each newly loaded page gets the day's
+  // styles (and reversed text) too.
+  var active = {};
+  function frameCss(top) {
+    var css = "";
+    for (var i = 0; i < EFFECTS.length; i++) {
+      var fxi = EFFECTS[i];
+      if (!active[fxi.name]) continue;
+      if (fxi.frameCss) css += fxi.frameCss;
+      if (top && fxi.css) css += fxi.css;
+    }
+    return css;
+  }
+  function styleDoc(doc) {
+    var css = frameCss(doc === document), st = doc.getElementById("sbfx-day");
+    if (!css) { if (st) st.parentNode.removeChild(st); return; }
+    if (!st) {
+      st = doc.createElement("style");
+      st.id = "sbfx-day";
+      (doc.head || doc.documentElement).appendChild(st);
+    }
+    if (st.textContent !== css) st.textContent = css;
+  }
+  function hookDoc(doc) {
+    if (!doc || !doc.documentElement) return;
+    styleDoc(doc);
+    if (reverseOn) reverseDoc(doc);
+    var frames = doc.getElementsByTagName("iframe");
+    for (var i = 0; i < frames.length; i++) hookFrame(frames[i]);
+  }
+  function hookFrame(f) {
+    if (!f.__sbHooked) {
+      f.__sbHooked = true;
+      f.addEventListener("load", function () { try { hookDoc(f.contentDocument); } catch (e) {} });
+    }
+    try { hookDoc(f.contentDocument); } catch (e) {}
+  }
+
+  // ---- falling snow / rain ---------------------------------------------------
+  var pCanvas = null, pTimer = null, parts = [];
+  function startParticles(mode) {
+    if (pCanvas || !document.body) return;
+    pCanvas = document.createElement("canvas");
+    pCanvas.setAttribute("aria-hidden", "true");
+    pCanvas.style.cssText = "position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:2147483000";
+    document.body.appendChild(pCanvas);
+    var ctx = pCanvas.getContext("2d"), w = 0, h = 0, rain = mode === "rain";
     // Phones get fewer flakes than tablets and desktops, and the canvas is
     // only resized when the screen changes (rotation, resizing).
-    function size() {
-      w = snowCanvas.width = window.innerWidth;
-      h = snowCanvas.height = window.innerHeight;
-    }
+    function size() { w = pCanvas.width = window.innerWidth; h = pCanvas.height = window.innerHeight; }
     size();
-    snowCanvas.__sbResize = size;
+    pCanvas.__sbResize = size;
     window.addEventListener("resize", size);
-    var count = Math.max(30, Math.min(90, Math.round(w * h / 12000)));
-    flakes = [];
-    for (var i = 0; i < count; i++) flakes.push({ x: Math.random(), y: Math.random(), r: 1 + Math.random() * 3, v: 0.0008 + Math.random() * 0.0018, d: Math.random() * 6.28 });
-    snowTimer = setInterval(function () {
+    var count = Math.max(30, Math.min(rain ? 120 : 90, Math.round(w * h / (rain ? 9000 : 12000))));
+    parts = [];
+    for (var i = 0; i < count; i++) parts.push({ x: Math.random(), y: Math.random(), r: 1 + Math.random() * 3, v: rain ? 0.012 + Math.random() * 0.01 : 0.0008 + Math.random() * 0.0018, d: Math.random() * 6.28 });
+    pTimer = setInterval(function () {
       if (document.hidden) return; // no work while the tab is in the background
       ctx.clearRect(0, 0, w, h);
-      // Black flakes on light pages, white ones in dark mode.
-      ctx.fillStyle = /(^|\s)sb-dark(\s|$)/.test(document.documentElement.className) ? "rgba(255,255,255,0.9)" : "rgba(0,0,0,0.75)";
-      for (var j = 0; j < flakes.length; j++) {
-        var f = flakes[j];
+      var dark = /(^|\s)sb-dark(\s|$)/.test(document.documentElement.className);
+      if (rain) {
+        ctx.strokeStyle = dark ? "rgba(200,215,225,0.5)" : "rgba(40,50,60,0.45)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+      } else {
+        // Black flakes on light pages, white ones in dark mode.
+        ctx.fillStyle = dark ? "rgba(255,255,255,0.9)" : "rgba(0,0,0,0.75)";
+      }
+      for (var j = 0; j < parts.length; j++) {
+        var f = parts[j];
         f.y += f.v; f.d += 0.02;
         if (f.y > 1.02) { f.y = -0.02; f.x = Math.random(); }
-        ctx.beginPath();
-        ctx.arc((f.x + Math.sin(f.d) * 0.01) * w, f.y * h, f.r, 0, 6.283);
-        ctx.fill();
+        if (rain) {
+          ctx.moveTo(f.x * w, f.y * h);
+          ctx.lineTo(f.x * w - 2, f.y * h + 8 + f.r * 3);
+        } else {
+          ctx.beginPath();
+          ctx.arc((f.x + Math.sin(f.d) * 0.01) * w, f.y * h, f.r, 0, 6.283);
+          ctx.fill();
+        }
       }
+      if (rain) ctx.stroke();
     }, 33);
   }
-  function stopSnow() {
-    if (!snowCanvas) return;
-    clearInterval(snowTimer);
-    window.removeEventListener("resize", snowCanvas.__sbResize);
-    snowCanvas.parentNode.removeChild(snowCanvas);
-    snowCanvas = null;
+  function stopParticles() {
+    if (!pCanvas) return;
+    clearInterval(pTimer);
+    window.removeEventListener("resize", pCanvas.__sbResize);
+    pCanvas.parentNode.removeChild(pCanvas);
+    pCanvas = null;
   }
+
+  // ---- Halloween glitches ----------------------------------------------------
+  // Rare and small at first, more often and harsher the longer the page is
+  // open ("insidiously gets discordant").
+  var gTimer = null, gStart = 0;
+  function glitchVars(on) {
+    var s = document.documentElement.style, r = function (n) { return (Math.random() * 2 - 1) * n; };
+    var k = Math.min(1, (new Date().getTime() - gStart) / 180000);
+    s.setProperty("--sbgx", on ? r(4 + 10 * k).toFixed(1) + "px" : "0px");
+    s.setProperty("--sbgy", on ? r(2 + 6 * k).toFixed(1) + "px" : "0px");
+    s.setProperty("--sbgs", on ? r(1 + 4 * k).toFixed(1) + "deg" : "0deg");
+    s.setProperty("--sbgh", on ? r(40 + 140 * k).toFixed(0) + "deg" : "0deg");
+    s.setProperty("--sbgi", on && Math.random() < 0.15 * k ? "1" : "0");
+  }
+  function startGlitch() {
+    if (gTimer) return;
+    gStart = new Date().getTime();
+    (function next() {
+      var k = Math.min(1, (new Date().getTime() - gStart) / 180000);
+      gTimer = setTimeout(function () {
+        if (!document.hidden) { glitchVars(true); setTimeout(function () { glitchVars(false); }, 90 + Math.random() * 120); }
+        next();
+      }, (7000 - 5500 * k) * (0.5 + Math.random()));
+    })();
+  }
+  function stopGlitch() { clearTimeout(gTimer); gTimer = null; glitchVars(false); }
 
   // ---- reversed text -------------------------------------------------------
   // Each text node is reversed once; the original comes back when turned off.
@@ -138,13 +261,6 @@
     });
     o.observe(doc.body, { childList: true, subtree: true, characterData: true });
     observers.push({ o: o, doc: doc });
-  }
-  function hookFrame(f) {
-    if (!f.__sbHooked) {
-      f.__sbHooked = true;
-      f.addEventListener("load", function () { try { reverseDoc(f.contentDocument); } catch (e) {} });
-    }
-    try { reverseDoc(f.contentDocument); } catch (e) {}
   }
   function startReverse() {
     if (reverseOn) return;
@@ -289,13 +405,13 @@
     panel.appendChild(h);
     panel.appendChild(row("Dark mode", "dark", "Dark background for this website."));
     panel.appendChild(row("Music", "music", "Plays the Wii Shop music, with special tracks on some days."));
-    // Seasonal options only exist on their day; the next day they are gone.
-    if (isSnowDay) panel.appendChild(row("Snowflakes", "snow", "Falls throughout December."));
-    if (isReverseDay) panel.appendChild(row("Reversed text", "reverse", "Today only, for the reversed Mii Channel theme."));
-    if (isSnowDay || isReverseDay) {
+    // Special-day options only exist on their day; the next day they are gone.
+    var list = todays();
+    for (var i = 0; i < list.length; i++) panel.appendChild(row(list[i].label, list[i].name, list[i].note));
+    if (list.length) {
       var n = document.createElement("div");
       n.style.cssText = "color:#777;font-size:11px;margin-top:6px";
-      n.appendChild(document.createTextNode("This also applies to the web shop."));
+      n.appendChild(document.createTextNode("Today's effect also shows in the web shop."));
       panel.appendChild(n);
     }
     btn.onclick = function () { panel.style.display = panel.style.display === "none" ? "block" : "none"; };
@@ -319,24 +435,37 @@
     if (fx) return;
     var t = new Date(), next = new Date(t.getFullYear(), t.getMonth(), t.getDate() + 1, 0, 0, 5);
     setTimeout(function () {
-      var snow = isSnowDay, rev = isReverseDay;
+      var before = names();
       today();
-      window.shroomFX.isSnowDay = isSnowDay;
-      window.shroomFX.isReverseDay = isReverseDay;
-      if (snow !== isSnowDay || rev !== isReverseDay) rebuildPanel();
+      if (names() !== before) rebuildPanel();
       apply();
       scheduleMidnight();
     }, next - t);
   }
+  function names() {
+    var l = todays(), s = [];
+    for (var i = 0; i < l.length; i++) s.push(l[i].name);
+    return s.join(",");
+  }
 
   function apply() {
-    if (isSnowDay && get("snow")) startSnow(); else stopSnow();
-    if (isReverseDay && get("reverse")) startReverse(); else stopReverse();
+    for (var i = 0; i < EFFECTS.length; i++) {
+      var fxi = EFFECTS[i], on = fxi.when() && get(fxi.name);
+      if (on && !active[fxi.name]) { active[fxi.name] = true; if (fxi.start) fxi.start(); }
+      else if (!on && active[fxi.name]) { active[fxi.name] = false; if (fxi.stop) fxi.stop(); }
+    }
+    hookDoc(document);
     if (!isShop) { setDark(get("dark")); if (get("music")) startMusic(); else stopMusic(); }
   }
 
   window.shroomFX = {
-    get: get, set: set, isSnowDay: isSnowDay, isReverseDay: isReverseDay,
+    get: get, set: set,
+    // [{name, label, note}] for today's special-day effects (S_16_6 lists these).
+    today: function () {
+      var l = todays(), out = [];
+      for (var i = 0; i < l.length; i++) out.push({ name: l[i].name, label: l[i].label, note: l[i].note });
+      return out;
+    },
     playing: function () { return !!audio && !audio.paused; }
   };
   document.addEventListener("pointerdown", unlock, true);
