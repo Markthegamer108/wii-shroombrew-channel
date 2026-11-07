@@ -112,7 +112,7 @@ func formatCard(n string) string {
 func cardHash(num string) string { return hmacHex("card", num) }
 
 // validCardPoints are the Wii Points amounts a minted card can carry.
-var validCardPoints = map[int]bool{1000: true, 2000: true, 3000: true, 5000: true}
+var validCardPoints = map[int]bool{1000: true, 2000: true, 3000: true, 4000: true, 5000: true}
 
 // generateCard mints one card for the caller's address, or says how long to wait.
 // points must be one of validCardPoints; it is stored on the card so redeeming
