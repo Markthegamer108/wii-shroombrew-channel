@@ -23,7 +23,7 @@ type Manifest struct {
 	Kind string `json:"kind,omitempty"`
 }
 
-var TitlePattern = regexp.MustCompile(`(?i)^00010001[0-9a-f]{8}$`)
+var TitlePattern = regexp.MustCompile(`(?i)^0001000[15][0-9a-f]{8}$`)
 var FilePattern = regexp.MustCompile(`(?i)^(tmd(\.[0-9]{1,5})?|[0-9a-f]{8})$`)
 
 // Import validates every decrypted content before atomically publishing a new package.
