@@ -80,7 +80,8 @@
     snowTimer = setInterval(function () {
       if (document.hidden) return; // no work while the tab is in the background
       ctx.clearRect(0, 0, w, h);
-      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      // Black flakes on light pages, white ones in dark mode.
+      ctx.fillStyle = /(^|\s)sb-dark(\s|$)/.test(document.documentElement.className) ? "rgba(255,255,255,0.9)" : "rgba(0,0,0,0.75)";
       for (var j = 0; j < flakes.length; j++) {
         var f = flakes[j];
         f.y += f.v; f.d += 0.02;
@@ -164,14 +165,41 @@
   }
 
   // ---- music (shroombrew.org only; the shop has its own) -------------------
-  var audio = null, audioIndex = 0, wantsMusic = false;
+  // Moving to another page keeps the song going: the position is saved for the
+  // browser tab and the next page carries on from it instead of restarting.
+  var audio = null, audioIndex = 0, wantsMusic = false, SAVE = "sbfxMusic";
+  function savePosition() {
+    if (!audio) return;
+    try {
+      sessionStorage.setItem(SAVE, JSON.stringify({ list: track().join(","), i: audioIndex, t: audio.currentTime, playing: !audio.paused, at: new Date().getTime() }));
+    } catch (e) {}
+  }
+  function savedPosition() {
+    try {
+      var s = JSON.parse(sessionStorage.getItem(SAVE) || "null");
+      if (s && s.list === track().join(",") && new Date().getTime() - s.at < 30 * 60 * 1000) return s;
+    } catch (e) {}
+    return null;
+  }
   function startMusic() {
     wantsMusic = true;
     if (!audio) {
-      var list = track();
-      audio = new Audio(base + "/snd/" + list[0] + ".mp3");
+      var list = track(), saved = savedPosition();
+      if (saved && saved.i < list.length) audioIndex = saved.i;
+      audio = new Audio(base + "/snd/" + list[audioIndex] + ".mp3");
       audio.volume = 0.35;
-      audio.loop = list.length === 1;
+      audio.loop = list.length === 1 || audioIndex === 1;
+      if (saved) {
+        // Add the moments spent loading this page so the beat lines up.
+        var resumeAt = saved.t + (saved.playing ? (new Date().getTime() - saved.at) / 1000 : 0);
+        audio.addEventListener("loadedmetadata", function seek() {
+          audio.removeEventListener("loadedmetadata", seek);
+          var d = audio.duration;
+          try { audio.currentTime = d && resumeAt >= d ? (audio.loop ? resumeAt % d : Math.max(0, d - 0.1)) : resumeAt; } catch (e) {}
+        });
+      }
+      setInterval(savePosition, 1000);
+      window.addEventListener("pagehide", savePosition);
       audio.addEventListener("ended", function () {
         // The intro plays once, then the loop repeats, as in the shop.
         if (list.length > 1 && audioIndex === 0) {
