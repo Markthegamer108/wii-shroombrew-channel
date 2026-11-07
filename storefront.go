@@ -29,6 +29,13 @@ type catalogApp struct {
 	Category    string `json:"category"`
 	Version     string `json:"version"`
 	Flash       bool   `json:"flash"`
+	// Licensed marks a real retail/Wii Shop WAD (Virtual Console, WiiWare,
+	// DLC, channels, IOS) that Shroombrew does not host: the console's native
+	// download imports the WAD directly from its external URL (mariocube) on
+	// first use, caching it locally in ./channels/. Price is the authentic
+	// Wii Points price (0 when the catalog falls back to derived pricing).
+	Licensed bool `json:"licensed"`
+	Price    int  `json:"price"`
 	Description struct {
 		Short string `json:"short"`
 		Long  string `json:"long"`
@@ -208,12 +215,12 @@ func (s *storefront) handler(soap http.Handler) http.Handler {
 				http.NotFound(w, r)
 				return
 			}
-			u, err := url.Parse(a.URL.Zip)
-			if err != nil || u.Scheme != "https" || u.Host != "hbb1.oscwii.org" || u.User != nil || !strings.HasPrefix(u.Path, "/api/contents/") {
+			target, ok := s.downloadTarget(a)
+			if !ok {
 				http.Error(w, "Download unavailable", 503)
 				return
 			}
-			http.Redirect(w, r, u.String(), http.StatusFound)
+			http.Redirect(w, r, target, http.StatusFound)
 			return
 		}
 		p := shopPage{Title: "Wii Shop Channel", Screen: "catalog", Wii: strings.Contains(r.UserAgent(), "Wii Shop"), Order: r.URL.Query().Get("sort"), Section: r.URL.Query().Get("section")}

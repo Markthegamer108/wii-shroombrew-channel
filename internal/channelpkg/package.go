@@ -41,6 +41,35 @@ func ImportSDInstaller(input, root, slug string) (Manifest, error) {
 	return importPackage(input, root, slug, "installer", "", false)
 }
 
+// ImportChannel atomically publishes a real retail WAD (Virtual Console,
+// WiiWare, DLC, channels, IOS) as a fakesigned package. The WAD supplies its
+// own title ID, which must equal expectedTitle (the catalog's), so a console
+// already holding that title installs this exact release. Unlike Publish the
+// package is not labelled for an SD installer app (SDApp is empty).
+func ImportChannel(wad []byte, root, expectedTitle string) (Manifest, error) {
+	expectedTitle = strings.ToLower(expectedTitle)
+	if !TitlePattern.MatchString(expectedTitle) {
+		return Manifest{}, errors.New("invalid title ID")
+	}
+	if err := os.MkdirAll(root, 0755); err != nil {
+		return Manifest{}, err
+	}
+	tmp, err := os.CreateTemp(root, ".import-*.wad")
+	if err != nil {
+		return Manifest{}, err
+	}
+	name := tmp.Name()
+	defer os.Remove(name)
+	if _, err := tmp.Write(wad); err != nil {
+		tmp.Close()
+		return Manifest{}, err
+	}
+	if err := tmp.Close(); err != nil {
+		return Manifest{}, err
+	}
+	return importPackage(name, root, "", "channel", expectedTitle, true)
+}
+
 // Publish atomically installs a freshly synthesized channel, replacing any
 // older package with the same title. It is only called for packages the server
 // built itself; the same validation as Import is applied first.

@@ -104,6 +104,11 @@ func (s *storefront) channelFSBlocks(app catalogApp) int {
 }
 
 func canSynthesize(app catalogApp) bool {
+	// Real licensed WADs (Virtual Console, WiiWare, ...) are imported as-is
+	// from their external host and never need the SD installer / env gating.
+	if app.Licensed {
+		return true
+	}
 	if os.Getenv("SHROOMBREW_DIRECT_SD") != "1" || os.Getenv("SHROOMBREW_NATIVE_EC") != "1" {
 		return false
 	}
@@ -169,6 +174,9 @@ func (s *storefront) buildChannel(ctx context.Context, app catalogApp) error {
 
 	if app.Flash {
 		return s.buildFlashChannel(ctx, app, id, started)
+	}
+	if app.Licensed {
+		return s.buildLicensedChannel(ctx, app, id, started)
 	}
 
 	u, err := approvedPackageURL(app.URL.Zip)
@@ -265,6 +273,27 @@ func (s *storefront) buildFlashChannel(ctx context.Context, app catalogApp, id s
 		return fmt.Errorf("publish Flash channel: %w", err)
 	}
 	log.Printf("channel %s: ready (Flash), %d bytes, version %d, took %s", id, len(wad), manifest.Version, time.Since(started).Round(time.Second))
+	return nil
+}
+
+// buildLicensedChannel imports a real retail Wii Shop WAD from its external
+// host (mariocube) the first time it is downloaded. Shroombrew does not host
+// these files; it fetches them on demand and caches the split package under
+// ./channels/<titleid>/, which the console's native CCS/ECS download serves.
+func (s *storefront) buildLicensedChannel(ctx context.Context, app catalogApp, id string, started time.Time) error {
+	u, err := approvedPackageURL(app.URL.Zip)
+	if err != nil {
+		return err
+	}
+	wad, err := fetchBytes(ctx, s.installs.client, u.String(), 512<<20)
+	if err != nil {
+		return fmt.Errorf("download licensed WAD: %w", err)
+	}
+	manifest, err := channelpkg.ImportChannel(wad, s.channelsRoot, strings.ToLower(id))
+	if err != nil {
+		return fmt.Errorf("import licensed WAD: %w", err)
+	}
+	log.Printf("channel %s: ready (licensed WAD), %d bytes, version %d, took %s", id, len(wad), manifest.Version, time.Since(started).Round(time.Second))
 	return nil
 }
 

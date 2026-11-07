@@ -113,8 +113,20 @@ func newInstallCode() (string, error) {
 
 func approvedPackageURL(raw string) (*url.URL, error) {
 	u, err := url.Parse(raw)
-	if err != nil || u.Scheme != "https" || u.Host != "hbb1.oscwii.org" || u.User != nil || !strings.HasPrefix(u.Path, "/api/contents/") {
-		return nil, errors.New("package URL is not an approved Open Shop Channel source")
+	if err != nil || u.Scheme != "https" || u.User != nil {
+		return nil, errors.New("package URL is not an approved https source")
+	}
+	switch u.Host {
+	case "hbb1.oscwii.org":
+		if !strings.HasPrefix(u.Path, "/api/contents/") {
+			return nil, errors.New("package URL is not an approved Open Shop Channel source")
+		}
+	case "repo.mariocube.com":
+		if !strings.HasPrefix(u.Path, "/WADs/") {
+			return nil, errors.New("package URL is not an approved MarioCube WAD source")
+		}
+	default:
+		return nil, errors.New("package URL is not an approved source")
 	}
 	return u, nil
 }

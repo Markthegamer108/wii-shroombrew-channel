@@ -136,9 +136,12 @@ func classicPrice(slug string) int {
 	return (int(sum[0])%5 + 1) * 100
 }
 
-// classicPriceFor returns 0 for Flash titles (free) and the normal price
-// otherwise.
+// classicPriceFor returns the authentic licensed price when the catalog sets
+// one, 0 for Flash titles (free), and the derived price otherwise.
 func classicPriceFor(app catalogApp) int {
+	if app.Price > 0 {
+		return app.Price
+	}
 	if app.Flash {
 		return 0
 	}
@@ -393,6 +396,20 @@ if(window.setTimeout){setTimeout(render,250);if(window.addEventListener)window.a
 })();`)
 }
 
+// downloadTarget returns the redirect URL for a title's WAD/package download.
+// Licensed games are fetched directly from their external host (mariocube);
+// homebrew uses the Open Shop Channel package mirror.
+func (s *storefront) downloadTarget(app catalogApp) (string, bool) {
+	if app.Licensed {
+		return app.URL.Zip, true
+	}
+	u, err := url.Parse(app.URL.Zip)
+	if err != nil || u.Scheme != "https" || u.Host != "hbb1.oscwii.org" || u.User != nil || !strings.HasPrefix(u.Path, "/api/contents/") {
+		return "", false
+	}
+	return u.String(), true
+}
+
 func (s *storefront) classicDownload(w http.ResponseWriter, r *http.Request) {
 	slug := strings.TrimPrefix(r.URL.Path, "/download/")
 	app, ok := s.bySlug[slug]
@@ -400,12 +417,12 @@ func (s *storefront) classicDownload(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	u, err := url.Parse(app.URL.Zip)
-	if err != nil || u.Scheme != "https" || u.Host != "hbb1.oscwii.org" || u.User != nil || !strings.HasPrefix(u.Path, "/api/contents/") {
+	target, ok := s.downloadTarget(app)
+	if !ok {
 		http.Error(w, "Download unavailable", http.StatusServiceUnavailable)
 		return
 	}
-	http.Redirect(w, r, u.String(), http.StatusFound)
+	http.Redirect(w, r, target, http.StatusFound)
 }
 
 func (s *storefront) classicSiteHandler(soap http.Handler) http.Handler {

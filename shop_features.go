@@ -219,7 +219,7 @@ func (s *storefront) checkout(w http.ResponseWriter, r *http.Request, app catalo
 		http.Error(w, "Wallet unavailable", 500)
 		return
 	}
-	price := classicPrice(app.Slug)
+	price := classicPriceFor(app)
 	var owned bool
 	if err = pool.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM shroombrew_purchases WHERE wallet=$1 AND slug=$2)`, id, app.Slug).Scan(&owned); err != nil {
 		http.Error(w, "Wallet unavailable", 500)
@@ -350,7 +350,7 @@ func (s *storefront) downloadFlow(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Package verification failed. No points were charged.", 502)
 			return
 		}
-		if err := purchaseOnce(r.Context(), id, app.Slug, classicPrice(app.Slug)); err != nil {
+		if err := purchaseOnce(r.Context(), id, app.Slug, classicPriceFor(app)); err != nil {
 			http.Error(w, "Not enough points or wallet unavailable", 409)
 			return
 		}
@@ -412,7 +412,7 @@ func (s *storefront) downloadFlow(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Package unavailable", 502)
 			return
 		}
-		if err := purchaseOnce(r.Context(), id, app.Slug, classicPrice(app.Slug)); err != nil {
+		if err := purchaseOnce(r.Context(), id, app.Slug, classicPriceFor(app)); err != nil {
 			http.Error(w, "Not enough points or wallet unavailable. Add points and retry.", 409)
 			return
 		}
