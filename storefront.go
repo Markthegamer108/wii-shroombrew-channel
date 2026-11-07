@@ -276,13 +276,21 @@ func (s *storefront) handler(soap http.Handler) http.Handler {
 			categories := map[string]bool{}
 			for _, a := range s.apps {
 				categories[a.Category] = true
-				if p.Section == "vc" && a.Category != "emulators" {
+				licensedCat := a.Category == "Virtual Console" || a.Category == "WiiWare" || a.Category == "DLC"
+				if p.Section == "vc" && a.Category != "Virtual Console" {
 					continue
 				}
-				if p.Section == "ww" && a.Category != "games" {
+				// the WiiWare section shows licensed WiiWare/DLC plus the
+				// homebrew "games" category (existing behavior)
+				if p.Section == "ww" && a.Category != "WiiWare" && a.Category != "DLC" && a.Category != "games" {
 					continue
 				}
-				if p.Section == "channels" && (a.Category == "games" || a.Category == "emulators") {
+				if p.Section == "channels" && (a.Category == "games" || a.Category == "emulators" || licensedCat) {
+					continue
+				}
+				// the Homebrew default view shows homebrew apps; licensed
+				// VC/WiiWare/DLC titles live in their own shop sections
+				if p.Section == "" && licensedCat {
 					continue
 				}
 				if p.Category != "" && a.Category != p.Category {
