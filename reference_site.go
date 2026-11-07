@@ -2,12 +2,15 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha1"
+	"fmt"
 	"mime"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // referenceSiteHandler serves the permissioned, unmodified browser recreation
@@ -95,7 +98,11 @@ func referenceSiteHandler(root string, next http.Handler) http.Handler {
 			w.Header().Set("Content-Type", mime.TypeByExtension(ext))
 			// Keep deployments fresh, including the shell's runtime state.
 			w.Header().Set("Cache-Control", "no-cache")
-			http.ServeContent(w, r, filepath.Base(filePath), info.ModTime(), bytes.NewReader([]byte(text)))
+			// Validate on the bytes actually sent: the file's date would let a
+			// browser keep a copy from before a rewrite changed.
+			sum := sha1.Sum([]byte(text))
+			w.Header().Set("ETag", fmt.Sprintf("\"%x\"", sum[:8]))
+			http.ServeContent(w, r, filepath.Base(filePath), time.Time{}, bytes.NewReader([]byte(text)))
 		default:
 			w.Header().Set("Cache-Control", "public, max-age=3600")
 			// ServeContent handles range requests for the original audio.

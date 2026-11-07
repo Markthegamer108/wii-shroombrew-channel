@@ -48,7 +48,13 @@
     if (month === 9 && day === 31) return ["theme1discordant"];
     return ["theme1", "theme2"];
   }
-  var isSnowDay = month === 11, isReverseDay = month === 0 && day === 14;
+  var isSnowDay, isReverseDay;
+  function today() {
+    if (!fx) { now = new Date(); month = now.getMonth(); day = now.getDate(); }
+    isSnowDay = month === 11;
+    isReverseDay = month === 0 && day === 14;
+  }
+  today();
 
   // ---- snow ----------------------------------------------------------------
   var snowCanvas = null, snowTimer = null, flakes = [];
@@ -58,15 +64,23 @@
     snowCanvas.setAttribute("aria-hidden", "true");
     snowCanvas.style.cssText = "position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:2147483000";
     document.body.appendChild(snowCanvas);
-    var ctx = snowCanvas.getContext("2d");
+    var ctx = snowCanvas.getContext("2d"), w = 0, h = 0;
+    // Phones get fewer flakes than tablets and desktops, and the canvas is
+    // only resized when the screen changes (rotation, resizing).
+    function size() {
+      w = snowCanvas.width = window.innerWidth;
+      h = snowCanvas.height = window.innerHeight;
+    }
+    size();
+    snowCanvas.__sbResize = size;
+    window.addEventListener("resize", size);
+    var count = Math.max(30, Math.min(90, Math.round(w * h / 12000)));
     flakes = [];
-    for (var i = 0; i < 90; i++) flakes.push({ x: Math.random(), y: Math.random(), r: 1 + Math.random() * 3, v: 0.0008 + Math.random() * 0.0018, d: Math.random() * 6.28 });
+    for (var i = 0; i < count; i++) flakes.push({ x: Math.random(), y: Math.random(), r: 1 + Math.random() * 3, v: 0.0008 + Math.random() * 0.0018, d: Math.random() * 6.28 });
     snowTimer = setInterval(function () {
-      var w = snowCanvas.width = window.innerWidth, h = snowCanvas.height = window.innerHeight;
+      if (document.hidden) return; // no work while the tab is in the background
       ctx.clearRect(0, 0, w, h);
       ctx.fillStyle = "rgba(255,255,255,0.9)";
-      ctx.shadowColor = "rgba(120,170,220,0.8)";
-      ctx.shadowBlur = 3;
       for (var j = 0; j < flakes.length; j++) {
         var f = flakes[j];
         f.y += f.v; f.d += 0.02;
@@ -80,6 +94,7 @@
   function stopSnow() {
     if (!snowCanvas) return;
     clearInterval(snowTimer);
+    window.removeEventListener("resize", snowCanvas.__sbResize);
     snowCanvas.parentNode.removeChild(snowCanvas);
     snowCanvas = null;
   }
@@ -91,6 +106,7 @@
   function flip(s) { return Array.from ? Array.from(s).reverse().join("") : s.split("").reverse().join(""); }
   function fixNode(t) {
     var p = t.parentNode, v = t.nodeValue;
+    for (var a = p; a; a = a.parentNode) if (a.id === "sbfx-panel") return;
     // The shop's dotted divider lines are decoration, not words.
     if (!p || SKIP[p.nodeName] || /(^|\s)dot(\s|$)/.test(p.className || "") || !v || !/\S/.test(v) || t.__sbRev === v) return;
     var r = flip(v);
@@ -100,7 +116,8 @@
   function walk(node) {
     if (!node) return;
     if (node.nodeType === 3) { fixNode(node); return; }
-    if (node.nodeType !== 1 || SKIP[node.nodeName]) return;
+    // The settings panel stays readable so the switch can still be found.
+    if (node.nodeType !== 1 || SKIP[node.nodeName] || node.id === "sbfx-panel") return;
     if (node.nodeName === "IFRAME") { hookFrame(node); return; }
     for (var c = node.firstChild; c; c = c.nextSibling) walk(c);
   }
@@ -172,6 +189,7 @@
   // Browsers only allow sound after the first click or key press.
   function unlock() {
     document.removeEventListener("pointerdown", unlock, true);
+    document.removeEventListener("touchend", unlock, true);
     document.removeEventListener("keydown", unlock, true);
     if (wantsMusic && audio && audio.paused) startMusic();
   }
@@ -199,19 +217,20 @@
   }
 
   // ---- settings panel (shroombrew.org) --------------------------------------
-  var panel = null;
+  var panel = null, gear = null, outsideHooked = false;
   function row(label, name, note) {
     var l = document.createElement("label");
-    l.style.cssText = "display:block;margin:6px 0;cursor:pointer";
+    // Rows are at least 44px tall so they are easy to tap on phones and tablets.
+    l.style.cssText = "display:block;margin:4px 0;padding:6px 0;min-height:32px;cursor:pointer;-webkit-tap-highlight-color:transparent";
     var c = document.createElement("input");
     c.type = "checkbox"; c.checked = get(name);
-    c.style.marginRight = "6px";
+    c.style.cssText = "width:20px;height:20px;margin:0 8px 0 0;vertical-align:middle";
     c.onchange = function () { set(name, c.checked); };
     l.appendChild(c);
     l.appendChild(document.createTextNode(label));
     if (note) {
       var s = document.createElement("span");
-      s.style.cssText = "display:block;margin-left:22px;color:#777;font-size:11px";
+      s.style.cssText = "display:block;margin-left:28px;color:#777;font-size:12px";
       s.appendChild(document.createTextNode(note));
       l.appendChild(s);
     }
@@ -224,25 +243,62 @@
     btn.title = "Settings";
     btn.id = "sbfx-btn";
     btn.appendChild(document.createTextNode("⚙"));
-    btn.style.cssText = "position:fixed;right:12px;bottom:12px;z-index:2147483001;width:40px;height:40px;border-radius:20px;border:2px solid #34beed;background:#fff;color:#34beed;font:20px/1 Arial;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.2)";
+    // Safe-area insets keep the button clear of iPhone home bars and notches.
+    btn.style.cssText = "position:fixed;right:12px;bottom:12px;right:calc(12px + env(safe-area-inset-right,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:2147483001;width:48px;height:48px;padding:0;border-radius:24px;border:2px solid #34beed;background:#fff;color:#34beed;font:24px/1 Arial;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.2);touch-action:manipulation;-webkit-tap-highlight-color:transparent";
     panel = document.createElement("div");
     panel.id = "sbfx-panel";
-    panel.style.cssText = "display:none;position:fixed;right:12px;bottom:60px;z-index:2147483001;width:230px;padding:10px 14px;background:#fff;border:2px solid #34beed;border-radius:10px;font:13px Arial,sans-serif;color:#333;box-shadow:0 2px 10px rgba(0,0,0,.2)";
+    panel.style.cssText = "display:none;position:fixed;right:12px;bottom:68px;right:calc(12px + env(safe-area-inset-right,0px));bottom:calc(68px + env(safe-area-inset-bottom,0px));z-index:2147483001;width:260px;max-width:calc(100vw - 24px);max-height:calc(100vh - 100px);overflow-y:auto;-webkit-overflow-scrolling:touch;box-sizing:border-box;padding:10px 14px;background:#fff;border:2px solid #34beed;border-radius:12px;font:15px Arial,sans-serif;color:#333;box-shadow:0 2px 10px rgba(0,0,0,.2)";
+    // Tapping outside the panel closes it, as people expect on touch screens.
+    if (!outsideHooked) {
+      outsideHooked = true;
+      document.addEventListener("click", function (e) {
+        if (panel && panel.style.display !== "none" && e.target !== gear && !panel.contains(e.target)) panel.style.display = "none";
+      }, true);
+    }
     var h = document.createElement("div");
     h.style.cssText = "font-weight:bold;color:#34beed;margin-bottom:4px";
     h.appendChild(document.createTextNode("Settings"));
     panel.appendChild(h);
     panel.appendChild(row("Dark mode", "dark", "Dark background for this website."));
     panel.appendChild(row("Music", "music", "Plays the Wii Shop music, with special tracks on some days."));
-    panel.appendChild(row("Snowflakes", "snow", "Falls throughout December."));
-    panel.appendChild(row("Reversed text", "reverse", "On 14 January, for the reversed Mii Channel theme."));
-    var n = document.createElement("div");
-    n.style.cssText = "color:#777;font-size:11px;margin-top:6px";
-    n.appendChild(document.createTextNode("Snowflakes and reversed text also apply to the web shop."));
-    panel.appendChild(n);
+    // Seasonal options only exist on their day; the next day they are gone.
+    if (isSnowDay) panel.appendChild(row("Snowflakes", "snow", "Falls throughout December."));
+    if (isReverseDay) panel.appendChild(row("Reversed text", "reverse", "Today only, for the reversed Mii Channel theme."));
+    if (isSnowDay || isReverseDay) {
+      var n = document.createElement("div");
+      n.style.cssText = "color:#777;font-size:11px;margin-top:6px";
+      n.appendChild(document.createTextNode("This also applies to the web shop."));
+      panel.appendChild(n);
+    }
     btn.onclick = function () { panel.style.display = panel.style.display === "none" ? "block" : "none"; };
     document.body.appendChild(panel);
     document.body.appendChild(btn);
+    gear = btn;
+  }
+  function rebuildPanel() {
+    if (!panel) return;
+    var open = panel.style.display !== "none";
+    panel.parentNode.removeChild(panel);
+    gear.parentNode.removeChild(gear);
+    panel = gear = null;
+    buildPanel();
+    if (open && panel) panel.style.display = "block";
+  }
+
+  // When the clock passes midnight, the old day's effects and their options go
+  // away (and the new day's appear) even if the page stays open.
+  function scheduleMidnight() {
+    if (fx) return;
+    var t = new Date(), next = new Date(t.getFullYear(), t.getMonth(), t.getDate() + 1, 0, 0, 5);
+    setTimeout(function () {
+      var snow = isSnowDay, rev = isReverseDay;
+      today();
+      window.shroomFX.isSnowDay = isSnowDay;
+      window.shroomFX.isReverseDay = isReverseDay;
+      if (snow !== isSnowDay || rev !== isReverseDay) rebuildPanel();
+      apply();
+      scheduleMidnight();
+    }, next - t);
   }
 
   function apply() {
@@ -256,7 +312,8 @@
     playing: function () { return !!audio && !audio.paused; }
   };
   document.addEventListener("pointerdown", unlock, true);
+  document.addEventListener("touchend", unlock, true); // older iPhones/iPads
   document.addEventListener("keydown", unlock, true);
-  function init() { buildPanel(); apply(); }
+  function init() { buildPanel(); apply(); scheduleMidnight(); }
   if (document.body) init(); else document.addEventListener("DOMContentLoaded", init);
 })();
