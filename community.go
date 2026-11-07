@@ -706,12 +706,25 @@ func (s *storefront) communityAPI(w http.ResponseWriter, r *http.Request) {
 		jsonOut(w, 200, map[string]interface{}{"active": active, "name": name, "site": publicSite()})
 		return
 	case route == "cards/generate" && validAPIPost(r):
-		num, err := generateCard(ctx, clientIP(r))
+		var in struct {
+			Points int `json:"points"`
+		}
+		if !read(&in) {
+			return
+		}
+		if in.Points == 0 {
+			in.Points = 1000
+		}
+		if !validCardPoints[in.Points] {
+			jsonErr(w, fmt.Errorf("invalid card value"))
+			return
+		}
+		num, err := generateCard(ctx, clientIP(r), in.Points)
 		if err != nil {
 			jsonErr(w, err)
 			return
 		}
-		jsonOut(w, 200, map[string]interface{}{"code": formatCard(num), "points": cardPoints, "cooldown": int(cardCooldown.Seconds())})
+		jsonOut(w, 200, map[string]interface{}{"code": formatCard(num), "points": in.Points, "cooldown": int(cardCooldown.Seconds())})
 		return
 	case route == "link" && validAPIPost(r):
 		var in struct{ Code string }

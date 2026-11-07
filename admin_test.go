@@ -57,7 +57,7 @@ func TestBansAndAdminIntegration(t *testing.T) {
 	if err := adminRun(bg, []string{"ban", ip, "2", "test", "abuse"}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := generateCard(bg, ip); err != errBanned {
+	if _, err := generateCard(bg, ip, 1000); err != errBanned {
 		t.Fatalf("banned generate: %v", err)
 	}
 	w := randomWalletForTest(t)
@@ -69,19 +69,19 @@ func TestBansAndAdminIntegration(t *testing.T) {
 		t.Fatalf("banned link: %v", err)
 	}
 	other := uniqueIP(t)
-	if _, err := generateCard(bg, other); err != nil {
+	if _, err := generateCard(bg, other, 1000); err != nil {
 		t.Fatalf("an unrelated address must be unaffected: %v", err)
 	}
 	if err := adminRun(bg, []string{"unban", ip}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := generateCard(bg, ip); err != nil {
+	if _, err := generateCard(bg, ip, 1000); err != nil {
 		t.Fatalf("after unban: %v", err)
 	}
 
 	// revoking an unused card makes it unusable; a used card cannot be revoked
 	rip := uniqueIP(t)
-	num, _ := generateCard(bg, rip)
+	num, _ := generateCard(bg, rip, 1000)
 	if err := adminRun(bg, []string{"card-revoke", formatCard(num)}); err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +93,7 @@ func TestBansAndAdminIntegration(t *testing.T) {
 	if h, _ := ledgerHistory(bg, w, 1); len(h) == 0 || h[0].Ref != "standard" {
 		t.Fatalf("revoked card still redeemed as minted: %+v", h)
 	}
-	used, _ := generateCard(bg, uniqueIP(t))
+	used, _ := generateCard(bg, uniqueIP(t), 1000)
 	if _, err := redeemCard(bg, w, uniqueIP(t), used); err != nil {
 		t.Fatal(err)
 	}
@@ -105,7 +105,7 @@ func TestBansAndAdminIntegration(t *testing.T) {
 	}
 	// bulk revoke by address
 	bip := uniqueIP(t)
-	generateCard(bg, bip)
+	generateCard(bg, bip, 1000)
 	if err := adminRun(bg, []string{"cards-revoke-ip", bip}); err != nil {
 		t.Fatal(err)
 	}

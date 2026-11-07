@@ -211,7 +211,7 @@ func TestCardsIntegration(t *testing.T) {
 
 	// --- generation: one card, then the 15 second cooldown ---
 	ip := uniqueIP(t)
-	num, err := generateCard(bg, ip)
+	num, err := generateCard(bg, ip, 1000)
 	if err != nil || !luhnValid(num) {
 		t.Fatalf("generate: %q %v", num, err)
 	}
@@ -219,16 +219,16 @@ func TestCardsIntegration(t *testing.T) {
 	if err = db.QueryRow(bg, `SELECT hash FROM shroombrew_cards WHERE hash=$1`, cardHash(num)).Scan(&stored); err != nil || strings.Contains(stored, num) {
 		t.Fatalf("card must be stored as a hash only: %v", err)
 	}
-	_, err = generateCard(bg, ip)
+	_, err = generateCard(bg, ip, 1000)
 	we, ok := err.(*waitError)
 	if !ok || we.seconds() < 10 || we.seconds() > 15 {
 		t.Fatalf("expected a ~15 s cooldown, got %v", err)
 	}
 	// the same /64 shares one cooldown
-	if _, err = generateCard(bg, "2001:db8:1:2:aaaa::1"); err != nil {
+	if _, err = generateCard(bg, "2001:db8:1:2:aaaa::1", 1000); err != nil {
 		t.Fatalf("first v6 card: %v", err)
 	}
-	if _, err = generateCard(bg, "2001:db8:1:2:bbbb::9"); err == nil {
+	if _, err = generateCard(bg, "2001:db8:1:2:bbbb::9", 1000); err == nil {
 		t.Fatal("an address in the same /64 must share the cooldown")
 	}
 
@@ -241,7 +241,7 @@ func TestCardsIntegration(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if _, e := generateCard(bg, pip); e == nil {
+			if _, e := generateCard(bg, pip, 1000); e == nil {
 				mu.Lock()
 				okCount++
 				mu.Unlock()
@@ -299,7 +299,7 @@ func TestCardsIntegration(t *testing.T) {
 			t.Fatalf("wrong card %d: %v", i, err)
 		}
 	}
-	good, err := generateCard(bg, uniqueIP(t))
+	good, err := generateCard(bg, uniqueIP(t), 1000)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -320,7 +320,7 @@ func TestCardsIntegration(t *testing.T) {
 	cw := randomWalletForTest(t)
 	walletBalance(cw)
 	db.Exec(bg, `UPDATE shroombrew_wallets SET points=$2 WHERE id=$1`, cw, walletCap-500)
-	capCard, _ := generateCard(bg, uniqueIP(t))
+	capCard, _ := generateCard(bg, uniqueIP(t), 1000)
 	if _, err = redeemCard(bg, cw, uniqueIP(t), capCard); err != errPointsCap {
 		t.Fatalf("cap: %v", err)
 	}
@@ -330,7 +330,7 @@ func TestCardsIntegration(t *testing.T) {
 	}
 
 	// --- an expired card is no longer minted: it redeems as a standard card ---
-	old, _ := generateCard(bg, uniqueIP(t))
+	old, _ := generateCard(bg, uniqueIP(t), 1000)
 	db.Exec(bg, `UPDATE shroombrew_cards SET created_at=now()-interval '31 days' WHERE hash=$1`, cardHash(old))
 	ew := randomWalletForTest(t)
 	walletBalance(ew)

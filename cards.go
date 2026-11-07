@@ -110,8 +110,16 @@ func formatCard(n string) string {
 
 func cardHash(num string) string { return hmacHex("card", num) }
 
+// validCardPoints are the Wii Points amounts a minted card can carry.
+var validCardPoints = map[int]bool{1000: true, 2000: true, 3000: true, 5000: true}
+
 // generateCard mints one card for the caller's address, or says how long to wait.
-func generateCard(ctx context.Context, ip string) (string, error) {
+// points must be one of validCardPoints; it is stored on the card so redeeming
+// it gives exactly that many points.
+func generateCard(ctx context.Context, ip string, points int) (string, error) {
+	if !validCardPoints[points] {
+		return "", fmt.Errorf("invalid card value")
+	}
 	if isBanned(ctx, ip) {
 		return "", errBanned
 	}
@@ -157,7 +165,7 @@ func generateCard(ctx context.Context, ip string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		tag, err := tx.Exec(ctx, `INSERT INTO shroombrew_cards(hash, points, creator) VALUES($1,$2,$3) ON CONFLICT DO NOTHING`, cardHash(num), cardPoints, creator)
+		tag, err := tx.Exec(ctx, `INSERT INTO shroombrew_cards(hash, points, creator) VALUES($1,$2,$3) ON CONFLICT DO NOTHING`, cardHash(num), points, creator)
 		if err != nil {
 			return "", err
 		}
