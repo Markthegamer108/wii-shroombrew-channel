@@ -42,3 +42,28 @@ func TestLicensedCatalogLoad(t *testing.T) {
 		t.Errorf("expected ~2694 licensed apps, got %d", licensed)
 	}
 }
+
+// Loads the merged homebrew + licensed catalog.json (a local build artifact)
+// and asserts the storefront consumes it with unique slugs.
+func TestMergedCatalogLoad(t *testing.T) {
+	if _, err := os.Stat("../catalog.json"); err != nil {
+		t.Skip("catalog.json not present (local build artifact)")
+	}
+	s, err := newStorefront("../catalog.json")
+	if err != nil {
+		t.Fatalf("newStorefront: %v", err)
+	}
+	if len(s.bySlug) != len(s.apps) {
+		t.Fatalf("bySlug entries %d != apps %d", len(s.bySlug), len(s.apps))
+	}
+	lic := 0
+	for _, a := range s.apps {
+		if a.Licensed {
+			lic++
+		}
+	}
+	t.Logf("apps: %d, bySlug: %d, licensed: %d", len(s.apps), len(s.bySlug), lic)
+	if lic < 2600 {
+		t.Errorf("expected ~2694 licensed apps, got %d", lic)
+	}
+}
