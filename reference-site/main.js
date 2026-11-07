@@ -128,8 +128,9 @@ var loadsnd = new Audio('snd/load.mp3');
 var now = new Date();
 if (now.getMonth() == 3 && now.getDate() == 1) {
   document.title = "Wiizer Shop Channel";
-  var theme1 = new Audio('snd/theme1.mp3');
-  var theme2 = new Audio('snd/theme2fool.mp3');
+  var theme1 = new Audio('snd/theme1deranged.mp3');
+  theme1.loop = true;
+  var theme2 = theme1;
 } else if (now.getMonth() == 11) {
   // December: the Wii Shop Christmas mashup plays all month. One looping
   // track instead of the usual intro/loop pair, so the whole song plays.
@@ -139,6 +140,31 @@ if (now.getMonth() == 3 && now.getDate() == 1) {
 } else if (now.getMonth() == 5 && now.getDate() == 26) {
   // June 26: "Attentiion" (Wii Shop x Charlie Puth) upload anniversary.
   var theme1 = new Audio('snd/theme1attention.mp3');
+  theme1.loop = true;
+  var theme2 = theme1;
+} else if (now.getMonth() == 0 && now.getDate() == 14) {
+  // Jan 14: "The Mii Channel theme but it's reversed" upload anniversary.
+  var theme1 = new Audio('snd/theme1reversed.mp3');
+  theme1.loop = true;
+  var theme2 = theme1;
+} else if (now.getMonth() == 0 && now.getDate() == 30) {
+  // Jan 30: "Wii Shop Channel but it's Depressing (RIP Wii Shop Channel)" — Wii Shop Channel closure anniversary.
+  var theme1 = new Audio('snd/theme1depressing.mp3');
+  theme1.loop = true;
+  var theme2 = theme1;
+} else if (now.getMonth() == 1 && now.getDate() == 9) {
+  // Feb 9: "Wii Shop Channel but it's ss" upload anniversary.
+  var theme1 = new Audio('snd/theme1ss.mp3');
+  theme1.loop = true;
+  var theme2 = theme1;
+} else if (now.getMonth() == 4 && now.getDate() == 5) {
+  // May 5: "wii theme but it was made by a 6 year old" — Children's Day.
+  var theme1 = new Audio('snd/theme1sixyearold.mp3');
+  theme1.loop = true;
+  var theme2 = theme1;
+} else if (now.getMonth() == 9 && now.getDate() == 31) {
+  // Oct 31: "Mii Channel Music but it insidiously gets discordant" — Halloween.
+  var theme1 = new Audio('snd/theme1discordant.mp3');
   theme1.loop = true;
   var theme2 = theme1;
 } else if(Math.random() < 0.01) {
