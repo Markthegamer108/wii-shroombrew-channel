@@ -58,6 +58,22 @@ type catalogApp struct {
 	Platform string `json:"platform,omitempty"`
 	Genre    string `json:"genre,omitempty"`
 	Rating   string `json:"rating,omitempty"`
+	// Variants lists every region-locked release of a collapsed licensed title
+	// (Europe/USA/Japan/Korea/...). The console's region selects which one the
+	// native download imports, so one catalog row serves the right WAD for any
+	// region. Empty for homebrew and single-release titles.
+	Variants []catalogVariant `json:"variants,omitempty"`
+}
+
+// catalogVariant is one region-locked release of a collapsed licensed title:
+// its region marker and coarse console-region group, the release's real title
+// ID and mariocube WAD URL, and the authentic Wii Points price.
+type catalogVariant struct {
+	Region      string `json:"region,omitempty"`
+	RegionGroup string `json:"region_group,omitempty"`
+	TitleID     string `json:"title_id,omitempty"`
+	Zip         string `json:"zip,omitempty"`
+	Price       int    `json:"price,omitempty"`
 }
 type storefront struct {
 	apps         []catalogApp
@@ -396,7 +412,7 @@ func (s *storefront) startWiiInstall(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	s.renderWiiInstallPair(w, r, app)
+	s.renderWiiInstallPair(w, r, s.regionApp(app, r))
 }
 
 func (s *storefront) startWiiInstallByTitle(w http.ResponseWriter, r *http.Request) {
@@ -410,17 +426,36 @@ func (s *storefront) startWiiInstallByTitle(w http.ResponseWriter, r *http.Reque
 		http.NotFound(w, r)
 		return
 	}
+	app, ok := s.appByTitleID(titleID)
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	app = s.regionApp(app, r)
+	if r.Method == http.MethodGet {
+		s.confirmWiiPurchase(w, r, app)
+		return
+	}
+	s.renderWiiInstallPair(w, r, app)
+}
+
+// appByTitleID finds the catalog entry whose primary (canonical) title ID or
+// any region-locked variant title ID matches. A collapsed licensed title is
+// addressed by its primary title ID from the catalog page, but once the
+// console's region has been applied the install/confirm pages carry that
+// region-specific variant ID, so both must resolve to the same entry.
+func (s *storefront) appByTitleID(titleID string) (catalogApp, bool) {
 	for _, app := range s.apps {
 		if classicTitleIDForApp(app) == titleID {
-			if r.Method == http.MethodGet {
-				s.confirmWiiPurchase(w, r, app)
-				return
+			return app, true
+		}
+		for _, v := range app.Variants {
+			if v.TitleID == titleID {
+				return app, true
 			}
-			s.renderWiiInstallPair(w, r, app)
-			return
 		}
 	}
-	http.NotFound(w, r)
+	return catalogApp{}, false
 }
 
 func (s *storefront) confirmWiiPurchase(w http.ResponseWriter, r *http.Request, app catalogApp) {
@@ -434,7 +469,7 @@ func (s *storefront) confirmWiiPurchase(w http.ResponseWriter, r *http.Request, 
 		http.Error(w, "Wallet unavailable", 500)
 		return
 	}
-	price := classicPrice(app.Slug)
+	price := classicPriceFor(app)
 	controllers := "See title details"
 	if len(app.Peripherals) > 0 {
 		controllers = strings.Join(app.Peripherals, ", ")
@@ -448,7 +483,7 @@ func (s *storefront) confirmWiiPurchase(w http.ResponseWriter, r *http.Request, 
 }
 
 func (s *storefront) renderWiiInstallPair(w http.ResponseWriter, r *http.Request, app catalogApp) {
-	price := classicPrice(app.Slug)
+	price := classicPriceFor(app)
 	id := ""
 	if pool != nil {
 		var err error

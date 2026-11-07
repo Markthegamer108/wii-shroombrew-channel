@@ -120,20 +120,20 @@ func (s *storefront) featureHandler(next http.Handler) http.Handler {
 			s.featureInfo(w, r)
 		case strings.HasPrefix(r.URL.Path, "/wii-install/title/"):
 			id := strings.ToUpper(strings.TrimPrefix(r.URL.Path, "/wii-install/title/"))
-			for _, app := range s.apps {
-				if classicTitleIDForApp(app) == id {
-					if r.Method == http.MethodGet && s.hasNativeSDPackage(app) {
-						// The title page picks the destination: the Wii System
-						// Memory / SD Card choice for channels, or the SD
-						// installer for packages that are one.
-						http.Redirect(w, r, "/native-ec/title/"+id, http.StatusSeeOther)
-						return
-					}
-					s.checkout(w, r, app)
-					return
-				}
+			app, ok := s.appByTitleID(id)
+			if !ok {
+				http.NotFound(w, r)
+				return
 			}
-			http.NotFound(w, r)
+			app = s.regionApp(app, r)
+			if r.Method == http.MethodGet && s.hasNativeSDPackage(app) {
+				// The title page picks the destination: the Wii System
+				// Memory / SD Card choice for channels, or the SD
+				// installer for packages that are one.
+				http.Redirect(w, r, "/native-ec/title/"+classicTitleIDForApp(app), http.StatusSeeOther)
+				return
+			}
+			s.checkout(w, r, app)
 		case strings.HasPrefix(r.URL.Path, "/download/"):
 			app, ok := s.bySlug[strings.TrimPrefix(r.URL.Path, "/download/")]
 			if !ok {

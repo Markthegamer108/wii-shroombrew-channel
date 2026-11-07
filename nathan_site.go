@@ -166,6 +166,84 @@ func consoleLabel(category string) string {
 	return "Homebrew"
 }
 
+// regionFor returns the console's coarse region from the cookie set when the
+// console registered (see deviceRegister). Unknown or missing falls back to US.
+func regionFor(r *http.Request) string {
+	if c, err := r.Cookie("shroombrew_region"); err == nil {
+		switch strings.ToUpper(strings.TrimSpace(c.Value)) {
+		case "US", "EU", "JP", "KR":
+			return strings.ToUpper(strings.TrimSpace(c.Value))
+		}
+	}
+	return "US"
+}
+
+func countryFor(r *http.Request) string {
+	if c, err := r.Cookie("shroombrew_country"); err == nil {
+		return strings.ToUpper(strings.TrimSpace(c.Value))
+	}
+	return ""
+}
+
+func containsStr(list []string, s string) bool {
+	for _, v := range list {
+		if v == s {
+			return true
+		}
+	}
+	return false
+}
+
+// markerCountries maps a catalog region marker to the ISO country codes whose
+// consoles should prefer that region-locked release (a German console gets the
+// Germany WAD, a US console the USA WAD, ...).
+var markerCountries = map[string][]string{
+	"germany": {"DE"}, "france": {"FR"}, "spain": {"ES"}, "italy": {"IT"},
+	"netherlands": {"NL"}, "uk": {"GB", "UK"}, "australia": {"AU"},
+	"usa": {"US"}, "canada": {"CA"}, "mexico": {"MX"},
+	"japan": {"JP"}, "korea": {"KR"},
+}
+
+// regionApp returns the catalog entry with its Shop.TitleId, URL.Zip and Price
+// swapped to the release matching the console's region, so the native download
+// imports the correct region-locked WAD (keyed by that release's title ID).
+// Titles with no region variants (homebrew, single-release) come back unchanged.
+func (s *storefront) regionApp(app catalogApp, r *http.Request) catalogApp {
+	if len(app.Variants) == 0 {
+		return app
+	}
+	region := regionFor(r)
+	country := countryFor(r)
+	best := catalogVariant{}
+	bestScore := 99
+	for _, v := range app.Variants {
+		if v.Zip == "" || v.TitleID == "" {
+			continue
+		}
+		score := 99
+		switch {
+		case region == "EU" && country != "" && v.RegionGroup == "EU" && containsStr(markerCountries[v.Region], country):
+			score = 1
+		case v.RegionGroup == region:
+			score = 2
+		case v.RegionGroup == "US":
+			score = 3
+		}
+		if score < bestScore {
+			bestScore = score
+			best = v
+		}
+	}
+	if best.TitleID == "" {
+		return app
+	}
+	out := app
+	out.Shop.TitleId = best.TitleID
+	out.URL.Zip = best.Zip
+	out.Price = best.Price
+	return out
+}
+
 func (s *storefront) classicTitles() []classicTitle {
 	titles := make([]classicTitle, 0, len(s.apps)+1)
 	titles = append(titles, classicTitle{}) // The imported catalog UI begins at index one.
@@ -387,26 +465,72 @@ function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 function value(name){var q=location.search.substring(1).split('&');for(var i=0;i<q.length;i++){var p=q[i].split('=');if(decodeURIComponent(p[0])==name)return decodeURIComponent((p[1]||'').replace(/\+/g,' '));}return '';}
 function pageURL(number){var old=location.search.substring(1).split('&');var kept=[];for(var j=0;j<old.length;j++){if(old[j]&&old[j].split('=')[0]!='p')kept.push(old[j]);}kept.push('p='+number);return '/oss/serv/B_04.html?'+kept.join('&');}
 function secURL(section){var old=location.search.substring(1).split('&');var kept=[];for(var j=0;j<old.length;j++){if(old[j]&&old[j].split('=')[0]!='category'&&old[j].split('=')[0]!='genre'&&old[j].split('=')[0]!='p')kept.push(old[j]);}kept.push('category='+encodeURIComponent(section));kept.push('p=1');return '/oss/serv/B_04.html?'+kept.join('&');}
+function subURL(section,genre){var old=location.search.substring(1).split('&');var kept=[];for(var j=0;j<old.length;j++){var kv=old[j];if(!kv)continue;var k=kv.split('=')[0];if(k!='category'&&k!='genre'&&k!='p')kept.push(kv);}if(section)kept.push('category='+encodeURIComponent(section));if(genre)kept.push('genre='+encodeURIComponent(genre));kept.push('p=1');return '/oss/serv/B_04.html?'+kept.join('&');}
+function subNav(subs,genre,section){var h='';for(var j=0;j<subs.length;j++){var name=subs[j][0],val=subs[j][1];var active=(genre==val)?'#e60000':'#000';h+='<a href="'+subURL(section,val)+'" style="color:'+active+';text-decoration:underline;margin-right:10px" onclick="wiiSelectSound();shroomNavigate(this.href);return false">'+name+'</a>';}return h;}
 function nav(){
  var info=document.getElementById('listinfo');if(!info)return;
  var cur=value('category');
- var secs=[['All Titles',''],['Virtual Console','Virtual Console'],['WiiWare','WiiWare'],['Wii Channels','Channels'],['DLC','DLC']];
- var html='<span style="color:#333">Browse section:</span> ';
- for(var j=0;j<secs.length;j++){
-  var name=secs[j][0],val=secs[j][1];
-  html+='<a href="'+secURL(val)+'" style="color:'+(cur==val?'#e60000':'#000')+';text-decoration:underline;margin-right:10px" onclick="wiiSelectSound();shroomNavigate(this.href);return false">'+name+'</a>';
+ var genre=value('genre');
+ var html='';
+ if(cur==''){
+  var secs=[['All Titles',''],['Virtual Console','Virtual Console'],['WiiWare','WiiWare'],['Wii Channels','Channels'],['DLC','DLC']];
+  html='<span style="color:#333">Browse section:</span> ';
+  for(var j=0;j<secs.length;j++){
+   var name=secs[j][0],val=secs[j][1];
+   html+='<a href="'+secURL(val)+'" style="color:'+(cur==val?'#e60000':'#000')+';text-decoration:underline;margin-right:10px" onclick="wiiSelectSound();shroomNavigate(this.href);return false">'+name+'</a>';
+  }
+  info.innerHTML=html;return;
  }
- info.innerHTML=html;
+ html='<a href="'+secURL('')+'" style="color:#000;text-decoration:underline;margin-right:10px" onclick="wiiSelectSound();shroomNavigate(this.href);return false">All Titles</a>';
+ if(cur=='Virtual Console'){
+  html+='<span style="color:#333;margin-right:10px">Virtual Console:</span>';
+  html+=subNav([['Nintendo licensed','Virtual Console'],['Homebrew emulators','emulators']],genre,cur);
+  info.innerHTML=html;return;
+ }
+ if(cur=='WiiWare'){
+  html+='<span style="color:#333;margin-right:10px">WiiWare (licensed)</span>';
+  info.innerHTML=html;return;
+ }
+ if(cur=='Channels'){
+  html+='<span style="color:#333;margin-right:10px">Wii Channels:</span>';
+  html+=subNav([['Licensed','Channels'],['Homebrew','homebrew-channels']],genre,cur);
+  if(genre=='homebrew-channels'){
+   html+='<br><span style="color:#333;margin-right:10px">Homebrew:</span>';
+   html+=subNav([['Utilities or so','utilities-or-so'],['Normal','games']],genre,cur);
+  }
+  info.innerHTML=html;return;
+ }
+ if(cur=='DLC'){
+  html+='<span style="color:#333;margin-right:10px">DLC (licensed)</span>';
+  info.innerHTML=html;return;
+ }
 }
 function render(){
  var frame=document.getElementById('catalogFrame');if(!frame||typeof gameslist=='undefined'){if(retries++<20)setTimeout(render,250);return;}
  nav();
  var page=parseInt(value('p')||'1',10);if(!page||page<1)page=1;
- var title=value('title').toLowerCase();var genre=(value('genre')||value('category')).toLowerCase();var publisher=value('publisher').toLowerCase();var list=[];var i;
+ var title=value('title').toLowerCase();var genre=value('genre').toLowerCase();var cat=value('category').toLowerCase();var publisher=value('publisher').toLowerCase();var list=[];var i;
+ function matchGenre(g){
+  g=String(g||'').toLowerCase();
+  if(genre){
+   if(genre=='utilities-or-so')return g=='utilities'||g=='media'||g=='demos';
+   if(genre=='games')return g=='games';
+   if(genre=='emulators')return g=='emulators';
+   if(genre=='homebrew-channels')return g=='games'||g=='utilities'||g=='media'||g=='demos';
+   return g==genre;
+  }
+  if(cat){
+   if(cat=='virtual console')return g=='virtual console'||g=='emulators';
+   if(cat=='channels')return g=='channels'||g=='games'||g=='utilities'||g=='media'||g=='demos';
+   if(cat=='wiware')return g=='wiware';
+   if(cat=='dlc')return g=='dlc';
+  }
+  return true;
+ }
  for(i=1;i<gameslist.length;i++){
   var game=gameslist[i];if(!game||!game.id)continue;
   if(title&&((game.title1||'')+' '+(game.title2||'')+' '+(game.publisher||'')).toLowerCase().indexOf(title)<0)continue;
-  if(genre&&String(game.genre||'').toLowerCase()!=genre)continue;
+  if(!matchGenre(String(game.genre||'')))continue;
   if(publisher&&String(game.publisher||'').toLowerCase().indexOf(publisher)<0)continue;
   list.push(game);
  }
@@ -494,7 +618,7 @@ func (s *storefront) classicDownload(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	target, ok := s.downloadTarget(app)
+	target, ok := s.downloadTarget(s.regionApp(app, r))
 	if !ok {
 		http.Error(w, "Download unavailable", http.StatusServiceUnavailable)
 		return

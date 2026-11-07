@@ -107,6 +107,39 @@ func setLangCookie(w http.ResponseWriter, lang string) {
 	http.SetCookie(w, &http.Cookie{Name: "shroombrew_lang", Value: lang, Path: "/", MaxAge: 60 * 60 * 24 * 365 * 5, SameSite: http.SameSiteLaxMode})
 }
 
+// regionGroupForDevice maps the console's reported region (a coarse group or an
+// ISO country code) to the catalog region groups (US/EU/JP/KR). The coarse
+// group selects which region-locked WAD a title serves, and the country cookie
+// lets regionApp prefer a country-specific release (Germany, France, ...) when
+// one exists. Missing or unknown region falls back to "" (regionFor defaults US).
+func regionGroupForDevice(info deviceInfo) string {
+	switch strings.ToUpper(strings.TrimSpace(info.Region)) {
+	case "US", "EU", "JP", "KR":
+		return strings.ToUpper(strings.TrimSpace(info.Region))
+	}
+	switch strings.ToUpper(strings.TrimSpace(info.Country)) {
+	case "US", "CA", "MX":
+		return "US"
+	case "JP":
+		return "JP"
+	case "KR":
+		return "KR"
+	case "GB", "DE", "FR", "ES", "IT", "NL", "AU", "AT", "BE", "PT", "SE", "NO", "DK", "FI", "IE", "CH", "PL", "CZ", "GR", "RU":
+		return "EU"
+	}
+	return ""
+}
+
+func setRegionCookies(w http.ResponseWriter, info deviceInfo) {
+	country := cleanField(info.Country)
+	if country != "" {
+		http.SetCookie(w, &http.Cookie{Name: "shroombrew_country", Value: country, Path: "/", MaxAge: 60 * 60 * 24 * 365 * 5, SameSite: http.SameSiteLaxMode})
+	}
+	if rg := regionGroupForDevice(info); rg != "" {
+		http.SetCookie(w, &http.Cookie{Name: "shroombrew_region", Value: rg, Path: "/", MaxAge: 60 * 60 * 24 * 365 * 5, SameSite: http.SameSiteLaxMode})
+	}
+}
+
 // deviceRegister is POSTed by the Wii client script (see compat.js).
 func (s *storefront) deviceRegister(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
@@ -145,6 +178,7 @@ func (s *storefront) deviceRegister(w http.ResponseWriter, r *http.Request) {
 	changed := langFor(r) != lang || cookieWallet != wallet
 	setWalletCookie(w, r, wallet)
 	setLangCookie(w, lang)
+	setRegionCookies(w, info)
 	jsonOut(w, 200, map[string]interface{}{"ok": 1, "lang": lang, "changed": changed})
 }
 
