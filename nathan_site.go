@@ -613,46 +613,17 @@ function value(name){var q=location.search.substring(1).split('&');for(var i=0;i
 // platform=WiiWare, platform=Wii Channels in each language); map them to sections.
 function section(){var c=value('category');if(c)return c;if(value('vc')=='true')return 'Virtual Console';var p=value('platform').toLowerCase();if(p.indexOf('wiiware')>=0)return 'WiiWare';if(p.indexOf('virtual')>=0)return 'Virtual Console';if(/channel|kanal|cha.ne|canal/.test(p))return 'Channels';return '';}
 function pageURL(number){var old=location.search.substring(1).split('&');var kept=[];for(var j=0;j<old.length;j++){if(old[j]&&old[j].split('=')[0]!='p')kept.push(old[j]);}kept.push('p='+number);return '/oss/serv/B_04.html?'+kept.join('&');}
-function secURL(section){var old=location.search.substring(1).split('&');var kept=[];for(var j=0;j<old.length;j++){var k0=old[j].split('=')[0];if(old[j]&&k0!='category'&&k0!='genre'&&k0!='p'&&k0!='platform'&&k0!='vc'&&k0!='hb')kept.push(old[j]);}kept.push('category='+encodeURIComponent(section));kept.push('p=1');return '/oss/serv/B_04.html?'+kept.join('&');}
-function subURL(section,genre){var old=location.search.substring(1).split('&');var kept=[];for(var j=0;j<old.length;j++){var kv=old[j];if(!kv)continue;var k=kv.split('=')[0];if(k!='category'&&k!='genre'&&k!='p'&&k!='platform'&&k!='vc')kept.push(kv);}if(section)kept.push('category='+encodeURIComponent(section));if(genre)kept.push('genre='+encodeURIComponent(genre));kept.push('p=1');return '/oss/serv/B_04.html?'+kept.join('&');}
-function subNav(subs,genre,section){var h='';for(var j=0;j<subs.length;j++){var name=subs[j][0],val=subs[j][1];var active=(genre==val)?'#e60000':'#000';h+='<a href="'+subURL(section,val)+'" style="color:'+active+';text-decoration:underline;margin-right:10px" onclick="wiiSelectSound();shroomNavigate(this.href);return false">'+name+'</a>';}return h;}
+// The list's heading, as on the original page: one plain title, no links.
 function nav(){
  var info=document.getElementById('listinfo');if(!info)return;
- var cur=section();
- var genre=value('genre');
- var html='';
- if(cur==''){
-  var secs=[['All Titles',''],['Virtual Console','Virtual Console'],['WiiWare','WiiWare'],['Wii Channels','Channels'],['DLC','DLC']];
-  html='<span style="color:#333">Browse section:</span> ';
-  for(var j=0;j<secs.length;j++){
-   var name=secs[j][0],val=secs[j][1];
-   html+='<a href="'+secURL(val)+'" style="color:'+(cur==val?'#e60000':'#000')+';text-decoration:underline;margin-right:10px" onclick="wiiSelectSound();shroomNavigate(this.href);return false">'+name+'</a>';
-  }
-  info.innerHTML=html;return;
- }
- html='<a href="'+secURL('')+'" style="color:#000;text-decoration:underline;margin-right:10px" onclick="wiiSelectSound();shroomNavigate(this.href);return false">All Titles</a>';
- // B_30 splits these two sections into Nintendo titles and homebrew (hb=1).
- if(cur=='Virtual Console'){
-  html+='<span style="color:#333;margin-right:10px">'+(value('hb')=='1'?'Virtual Console: homebrew emulators':'Virtual Console: Nintendo')+'</span>';
-  info.innerHTML=html;return;
- }
- if(cur=='WiiWare'){
-  html+='<span style="color:#333;margin-right:10px">'+(value('hb')=='1'?'WiiWare: homebrew games':'WiiWare: Nintendo')+'</span>';
-  info.innerHTML=html;return;
- }
- if(cur=='Channels'){
-  html+='<span style="color:#333;margin-right:10px">Wii Channels:</span>';
-  html+=subNav([['Licensed','Channels'],['Homebrew','homebrew-channels']],genre,cur);
-  if(genre=='homebrew-channels'){
-   html+='<br><span style="color:#333;margin-right:10px">Homebrew:</span>';
-   html+=subNav([['Utilities or so','utilities-or-so'],['Normal','games']],genre,cur);
-  }
-  info.innerHTML=html;return;
- }
- if(cur=='DLC'){
-  html+='<span style="color:#333;margin-right:10px">DLC (licensed)</span>';
-  info.innerHTML=html;return;
- }
+ var cur=section(),hb=value('hb')=='1',t;
+ if(value('title'))t='Results for '+value('title');
+ else if(hb)t=cur=='Virtual Console'?'Homebrew Emulators':'Homebrew Games';
+ else if(value('order')=='new')t='Newest Additions';
+ else if(value('popular')=='true')t='Popular Titles';
+ else if(value('publisher'))t=value('publisher');
+ else t={'Virtual Console':'Virtual Console','WiiWare':'WiiWare','Channels':'Wii Channels','DLC':'DLC'}[cur]||'Catalog';
+ info.innerHTML=esc(t);
 }
 function render(){
  var frame=document.getElementById('catalogFrame');if(!frame||typeof gameslist=='undefined'){if(retries++<20)setTimeout(render,250);return;}
