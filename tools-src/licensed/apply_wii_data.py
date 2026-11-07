@@ -63,6 +63,17 @@ def slug_region(slug):
             return r[1:]
     return "europe"
 
+def clean_name(nm):
+    # The real Wii Shop catalog stores names with HTML <sup> markers
+    # (e.g. "Mario Bros.<sup>TM</sup>"). Our shop UI escapes HTML, so turn
+    # the trademark/registered/copyright superscripts into their symbols and
+    # strip any other tags so the name reads cleanly as plain text.
+    nm = re.sub(r"<sup>\s*(TM|™)\s*</sup>", "\u2122", nm, flags=re.I)
+    nm = re.sub(r"<sup>\s*(R|®)\s*</sup>", "\u00ae", nm, flags=re.I)
+    nm = re.sub(r"<sup>\s*(C|©)\s*</sup>", "\u00a9", nm, flags=re.I)
+    nm = re.sub(r"<[^>]+>", "", nm)
+    return re.sub(r"\s+", " ", nm).strip()
+
 def parse_date(s):
     if not s:
         return 0
@@ -160,7 +171,7 @@ def main():
         if wm and wm["language"].upper() == "EN":
             nm = wm.get("title1", "").strip()
             if nm:
-                entry["name"] = re.sub(r"\s+", " ", nm)
+                entry["name"] = clean_name(nm)
                 changed_name += 1
             pub = wm.get("publisher", "").strip()
             if pub:
