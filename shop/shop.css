@@ -25,7 +25,12 @@ body{line-height:normal}
 #pagination{left:372px;top:385px;width:205px}#page-count{left:56px;top:0;width:92px;height:36px;line-height:36px}
 /* Original B_04 catalog geometry and its supplied 488x91 row artwork. */
 #catalog-summary{left:36px;top:79px;width:536px;height:18px;font-size:14px;line-height:18px}
-#catalog-list{left:36px;top:101px;width:540px;height:264px;overflow:auto;border:1px solid #35beed;box-sizing:border-box}
+#catalog-list{left:36px;top:126px;width:540px;height:239px;overflow:auto;border:1px solid #35beed;box-sizing:border-box}
+#catalog-nav{left:36px;top:98px;width:540px;height:26px;overflow:hidden;white-space:nowrap}
+.nav-label{display:inline-block;margin:0 6px 0 0;font-size:12px;color:#323232;vertical-align:middle}
+.nav-button{display:inline-block;margin:1px 4px 0 0;padding:2px 8px;font-size:12px;line-height:16px;vertical-align:middle;border:1px solid #35beed;border-radius:6px;background:#fff;color:#323232}
+.nav-button:hover,.nav-button:focus{background:#d6eefb;color:#34beed}
+.nav-button.active{background:#34beed;color:#fff}
 .catalog-row{display:block;position:relative;width:488px;height:91px;margin:24px 0 0;border:0;background:transparent;overflow:hidden}
 .catalog-row+.catalog-row{margin-top:21px}
 .catalog-banner{position:absolute;left:0;top:0;width:488px;height:91px;z-index:0}

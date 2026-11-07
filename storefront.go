@@ -51,6 +51,13 @@ type catalogApp struct {
 	Shop        Shop     `json:"shop"`
 	Peripherals []string `json:"peripherals"`
 	ReleaseDate int64    `json:"release_date"`
+	// Real Wii Shop metadata (from the WiiMart revival of the real catalog):
+	// the canonical platform (NES, Super NES, Nintendo 64, Sega Genesis,
+	// WiiWare, Wii Channel, ...), genre and ESRB rating exactly as the real
+	// shop displayed them.
+	Platform string `json:"platform,omitempty"`
+	Genre    string `json:"genre,omitempty"`
+	Rating   string `json:"rating,omitempty"`
 }
 type storefront struct {
 	apps         []catalogApp
@@ -82,6 +89,7 @@ type shopPage struct {
 	Prev         string
 	Next         string
 	Wii          bool
+	Platform     string
 }
 
 var safeSlug = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
@@ -203,11 +211,9 @@ func (s *storefront) handler(soap http.Handler) http.Handler {
 			return
 		case strings.HasPrefix(r.URL.Path, "/icons/"):
 			slug := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/icons/"), ".png")
-			if _, ok := s.bySlug[slug]; !ok || !safeSlug.MatchString(slug) {
+			if !s.serveShopIcon(w, r, slug) {
 				http.NotFound(w, r)
-				return
 			}
-			http.ServeFile(w, r, "./icons/"+slug+".png")
 			return
 		case strings.HasPrefix(r.URL.Path, "/download/"):
 			a, ok := s.bySlug[strings.TrimPrefix(r.URL.Path, "/download/")]
@@ -243,6 +249,10 @@ func (s *storefront) handler(soap http.Handler) http.Handler {
 				return
 			}
 			p.App = &a
+			p.Platform = a.Platform
+			if p.Platform == "" {
+				p.Platform = consoleLabel(a.Category)
+			}
 			if a.FileSize.ZipCompressed > 0 {
 				p.DownloadSize = fmt.Sprintf("%.1f MB", float64(a.FileSize.ZipCompressed)/1000000)
 			}
@@ -285,12 +295,15 @@ func (s *storefront) handler(soap http.Handler) http.Handler {
 				if p.Section == "ww" && a.Category != "WiiWare" && a.Category != "DLC" && a.Category != "games" {
 					continue
 				}
-				if p.Section == "channels" && (a.Category == "games" || a.Category == "emulators" || licensedCat) {
+				// the Channels section shows the real downloadable Wii channels
+				// (BBC iPlayer, Netflix, Forecast, Mii, ...), and nothing else.
+				if p.Section == "channels" && a.Category != "Channels" {
 					continue
 				}
 				// the Homebrew default view shows homebrew apps; licensed
-				// VC/WiiWare/DLC titles live in their own shop sections
-				if p.Section == "" && licensedCat {
+				// VC/WiiWare/DLC titles and real Wii channels live in their own
+				// shop sections
+				if p.Section == "" && (licensedCat || a.Category == "Channels") {
 					continue
 				}
 				if p.Category != "" && a.Category != p.Category {

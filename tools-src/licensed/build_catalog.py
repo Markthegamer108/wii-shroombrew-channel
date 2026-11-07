@@ -15,7 +15,7 @@ Sources:
           mariocube); the complete set, used as a fallback for titles absent
           from the scene set.
 
-Scope: Virtual Console + WiiWare + DLC (channels and IOS are excluded).
+Scope: Virtual Console + WiiWare + DLC + system Channels (IOS is excluded).
 
 Usage: python build_catalog.py WAD_Info.xlsx out_catalog.json
 """
@@ -113,6 +113,8 @@ def classify(fn):
         return ("DLC", None) if "(dlc)" in low else ("WiiWare", None)
     if "(dlc)" in low:
         return ("DLC", None)
+    if "(channel)" in low:
+        return ("Channels", None)
     return None
 
 
@@ -136,6 +138,10 @@ def price_for(category, system):
         return SYSTEMS.get(system, WW_DEFAULT)
     if category == "DLC":
         return DLC_DEFAULT
+    if category == "Channels":
+        # System channels (Mii, Forecast, News, Photo, Wii Shop) were free
+        # downloads from the Wii Shop, like the preinstalled channels.
+        return 0
     return WW_DEFAULT
 
 
@@ -219,6 +225,83 @@ def clean_game(realname):
     return re.sub(r"\s+", " ", s).strip()
 
 
+SYSTEM_NAMES = {
+    "nes": "Nintendo Entertainment System",
+    "fds": "Famicom Disk System",
+    "famicom disk system": "Famicom Disk System",
+    "snes": "Super Nintendo Entertainment System",
+    "sfc": "Super Nintendo Entertainment System",
+    "n64": "Nintendo 64",
+    "nintendo 64": "Nintendo 64",
+    "sms": "Master System",
+    "master system": "Master System",
+    "md": "Mega Drive / Genesis",
+    "smd": "Mega Drive / Genesis",
+    "mega drive": "Mega Drive / Genesis",
+    "genesis": "Mega Drive / Genesis",
+    "tgx": "TurboGrafx-16 / PC Engine",
+    "turbografx": "TurboGrafx-16 / PC Engine",
+    "turbografx-16": "TurboGrafx-16 / PC Engine",
+    "pce": "TurboGrafx-16 / PC Engine",
+    "ng": "Neo Geo",
+    "neo geo": "Neo Geo",
+    "c64": "Commodore 64",
+    "commodore 64": "Commodore 64",
+    "msx": "MSX",
+    "arcade": "Arcade",
+}
+
+REGION_NAMES = {
+    "japan": "Japan",
+    "europe": "Europe",
+    "usa": "North America",
+    "korea": "Korea",
+    "france": "France",
+    "germany": "Germany",
+    "italy": "Italy",
+    "spain": "Spain",
+    "canada": "Canada",
+}
+
+
+def describe(cat, system, game, region):
+    """Build an authentic, accurate description from the available metadata.
+    The licensed catalog carries no verbatim Nintendo copy, so descriptions
+    are written in the style of the real Wii Shop from the real title data."""
+    reg = REGION_NAMES.get(region)
+    regnote = (" in the %s region" % reg) if reg else ""
+    if cat == "Virtual Console":
+        sysname = SYSTEM_NAMES.get(system)
+        if sysname:
+            short = 'Play the classic %s title "%s" on your Wii.' % (sysname, game)
+            long = ('This Virtual Console release brings "%s", a classic %s title, to the Wii Shop '
+                    'Channel%s. It can be played with the Wii Remote, the Classic Controller, or a '
+                    'GameCube controller. Downloaded from the Shop Channel, it installs to your Wii '
+                    'Menu as its own channel.') % (game, sysname, regnote)
+        else:
+            short = 'A classic title for the Virtual Console: "%s".' % game
+            long = ('"%s" is a classic game available on the Wii Virtual Console%s. It can be played '
+                    'with the Wii Remote, the Classic Controller, or a GameCube controller.'
+                    ) % (game, regnote)
+    elif cat == "WiiWare":
+        short = 'Download "%s" from the WiiWare section of the Wii Shop Channel.' % game
+        long = ('"%s" is a downloadable game from the WiiWare section of the Wii Shop Channel%s. It '
+                'installs to your Wii Menu as its own channel and runs directly on the console.'
+                ) % (game, regnote)
+    elif cat == "DLC":
+        short = 'Additional downloadable content for "%s".' % game
+        long = ('This is additional downloadable content for "%s", available from the Wii Shop '
+                'Channel%s. It adds extra playable content to the base title.') % (game, regnote)
+    elif cat == "Channels":
+        short = 'A Wii Shop Channel for "%s".' % game
+        long = ('"%s" is a Wii Channel available from the Wii Shop Channel%s. It installs directly '
+                'to your Wii Menu alongside your other channels.') % (game, regnote)
+    else:
+        short = '"%s" for the Wii.' % game
+        long = '"%s" is available from the Wii Shop Channel%s for your Wii.' % (game, regnote)
+    return short, long
+
+
 def main():
     if len(sys.argv) != 3:
         print("usage: build_catalog.py WAD_Info.xlsx out_catalog.json", file=sys.stderr)
@@ -264,8 +347,9 @@ def main():
             tver = int(ver)
         except (TypeError, ValueError):
             tver = 0
-        # description.short empty so Go's displayName() keeps the real name
-        # (its heuristic only kicks in when short equals name).
+        # description.short is an authentic blurb (it never equals the name, so
+        # Go's displayName() keeps the real clean title as the display name).
+        short, long = describe(cat, system, game, region)
         entry = {
             "slug": slug,
             "name": game,
@@ -274,7 +358,7 @@ def main():
             "version": "",
             "licensed": True,
             "price": price,
-            "description": {"short": "", "long": game},
+            "description": {"short": short, "long": long},
             "url": {"icon": "", "zip": url},
             "file_size": {"zip_compressed": size, "zip_uncompressed": 0},
             "shop": {"title_id": tid, "title_version": tver, "contents_size": 0},

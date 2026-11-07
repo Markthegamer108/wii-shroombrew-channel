@@ -14,6 +14,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -148,6 +149,23 @@ func classicPriceFor(app catalogApp) int {
 	return classicPrice(app.Slug)
 }
 
+// consoleLabel returns the platform a title is marked with in the shop. Real
+// licensed titles are labelled by their actual Wii Shop platform (Virtual
+// Console, WiiWare, DLC, Wii Channel) instead of the old "Homebrew" catch-all.
+func consoleLabel(category string) string {
+	switch category {
+	case "Virtual Console":
+		return "Virtual Console"
+	case "WiiWare":
+		return "WiiWare"
+	case "DLC":
+		return "DLC"
+	case "Channels":
+		return "Wii Channel"
+	}
+	return "Homebrew"
+}
+
 func (s *storefront) classicTitles() []classicTitle {
 	titles := make([]classicTitle, 0, len(s.apps)+1)
 	titles = append(titles, classicTitle{}) // The imported catalog UI begins at index one.
@@ -164,15 +182,32 @@ func (s *storefront) classicTitles() []classicTitle {
 		if size == 0 {
 			size = app.Shop.ContentsSize
 		}
+		// The catalog carries the real Wii Shop platform/rating when known;
+		// fall back to the broad shop section otherwise. Genre stays the
+		// section (Virtual Console/WiiWare/...) so the catalog groups by the
+		// real shop's sections, sorted alphabetically within each.
+		console := consoleLabel(category)
+		if app.Platform != "" {
+			console = app.Platform
+		}
 		titles = append(titles, classicTitle{
-			ID: classicTitleIDForApp(app), Title1: app.Name, Console: "Homebrew",
+			ID: classicTitleIDForApp(app), Title1: app.Name, Console: console,
 			Region: "US", Language: "EN", Publisher: app.Author, Genre: category,
 			Date: releaseDate, ReleaseUnix: app.ReleaseDate, Added: releaseDate, Points: strconv.Itoa(classicPriceFor(app)), Players: "", Attributes: "",
-			Controllers: strings.Join(app.Peripherals, ", "), Rating: "", RatingDetails: "", Size: size,
+			Controllers: strings.Join(app.Peripherals, ", "), Rating: app.Rating, RatingDetails: "", Size: size,
 			Link:      "/download/" + app.Slug,
 			Thumbnail: "/icons/" + app.Slug + ".png", Description: app.Description.Short,
 		})
 	}
+	// The shop catalog is grouped by section (category) and alphabetical
+	// within each section, matching the real Wii Shop ordering.
+	sort.SliceStable(titles[1:], func(i, j int) bool {
+		a, b := titles[i+1], titles[j+1]
+		if a.Genre != b.Genre {
+			return a.Genre < b.Genre
+		}
+		return strings.ToLower(a.Title1) < strings.ToLower(b.Title1)
+	})
 	return titles
 }
 
@@ -351,19 +386,33 @@ var retries=0;
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function value(name){var q=location.search.substring(1).split('&');for(var i=0;i<q.length;i++){var p=q[i].split('=');if(decodeURIComponent(p[0])==name)return decodeURIComponent((p[1]||'').replace(/\+/g,' '));}return '';}
 function pageURL(number){var old=location.search.substring(1).split('&');var kept=[];for(var j=0;j<old.length;j++){if(old[j]&&old[j].split('=')[0]!='p')kept.push(old[j]);}kept.push('p='+number);return '/oss/serv/B_04.html?'+kept.join('&');}
+function secURL(section){var old=location.search.substring(1).split('&');var kept=[];for(var j=0;j<old.length;j++){if(old[j]&&old[j].split('=')[0]!='category'&&old[j].split('=')[0]!='genre'&&old[j].split('=')[0]!='p')kept.push(old[j]);}kept.push('category='+encodeURIComponent(section));kept.push('p=1');return '/oss/serv/B_04.html?'+kept.join('&');}
+function nav(){
+ var info=document.getElementById('listinfo');if(!info)return;
+ var cur=value('category');
+ var secs=[['All Titles',''],['Virtual Console','Virtual Console'],['WiiWare','WiiWare'],['Wii Channels','Channels'],['DLC','DLC']];
+ var html='<span style="color:#333">Browse section:</span> ';
+ for(var j=0;j<secs.length;j++){
+  var name=secs[j][0],val=secs[j][1];
+  html+='<a href="'+secURL(val)+'" style="color:'+(cur==val?'#e60000':'#000')+';text-decoration:underline;margin-right:10px" onclick="wiiSelectSound();shroomNavigate(this.href);return false">'+name+'</a>';
+ }
+ info.innerHTML=html;
+}
 function render(){
  var frame=document.getElementById('catalogFrame');if(!frame||typeof gameslist=='undefined'){if(retries++<20)setTimeout(render,250);return;}
+ nav();
  var page=parseInt(value('p')||'1',10);if(!page||page<1)page=1;
  var title=value('title').toLowerCase();var genre=(value('genre')||value('category')).toLowerCase();var publisher=value('publisher').toLowerCase();var list=[];var i;
  for(i=1;i<gameslist.length;i++){
   var game=gameslist[i];if(!game||!game.id)continue;
   if(title&&((game.title1||'')+' '+(game.title2||'')+' '+(game.publisher||'')).toLowerCase().indexOf(title)<0)continue;
-  if(genre=='channels'){if(game.genre=='games'||game.genre=='emulators')continue;}else if(genre&&String(game.genre||'').toLowerCase()!=genre)continue;
+  if(genre&&String(game.genre||'').toLowerCase()!=genre)continue;
   if(publisher&&String(game.publisher||'').toLowerCase().indexOf(publisher)<0)continue;
   list.push(game);
  }
  if(value('order')=='new')list.sort(function(a,b){return (b.releaseUnix||0)-(a.releaseUnix||0);});
- else list.sort(function(a,b){return String(a.title1||'').toLowerCase()<String(b.title1||'').toLowerCase()?-1:1;});
+ else if(genre)list.sort(function(a,b){return String(a.title1||'').toLowerCase()<String(b.title1||'').toLowerCase()?-1:1;});
+ else list.sort(function(a,b){var g=String(a.genre||'').toLowerCase()<String(b.genre||'').toLowerCase()?-1:1;return g?g:(String(a.title1||'').toLowerCase()<String(b.title1||'').toLowerCase()?-1:1);});
  var pages=Math.max(1,Math.ceil(list.length/3));if(page>pages)page=pages;
  var first=(page-1)*3;var html='';
  for(i=0;i<3&&first+i<list.length;i++){
@@ -379,7 +428,6 @@ function render(){
  // A press that opened this list must not also open the row now under the pointer.
  window.shroomListReady=new Date().getTime()+700;
  frame.innerHTML=html;frame.style.display='';frame.style.overflow='hidden';frame.style.left='60px';frame.style.width='488px';frame.style.background='white';frame.style.border='none';
- var info=document.getElementById('listinfo');if(info)info.innerHTML=(title?'Search Results':'Select a Title');
  var count=document.getElementById('pageNum');if(count)count.innerHTML=page+'/'+pages;
  var left=document.getElementById('backArrow');if(left){left.href=pageURL(page>1?page-1:1);left.onclick=function(){shroomNavigate(left.href);return false;};}
  var right=document.getElementById('nextArrow');if(right){right.href=pageURL(page<pages?page+1:pages);right.onclick=function(){shroomNavigate(right.href);return false;};}
@@ -394,6 +442,35 @@ function render(){
 }
 if(window.setTimeout){setTimeout(render,250);if(window.addEventListener)window.addEventListener('load',function(){setTimeout(render,100);},false);}else render();
 })();`)
+}
+
+// serveShopIcon serves a title's icon. Homebrew titles (and any pre-rendered
+// PNG in ./icons/) are served as PNG. Real licensed Wii Shop titles have no
+// PNG in ./icons/; their authentic icon is a GIF texture in the original shop
+// layout site/oss/ccs/<titleId>/FFFD0000, which is served directly so the
+// catalog shows the real icon without a conversion step.
+func (s *storefront) serveShopIcon(w http.ResponseWriter, r *http.Request, slug string) bool {
+	app, ok := s.bySlug[slug]
+	if !ok || !safeSlug.MatchString(slug) {
+		return false
+	}
+	icon := filepath.Join("./icons", slug+".png")
+	if info, err := os.Stat(icon); err == nil && !info.IsDir() {
+		w.Header().Set("Content-Type", "image/png")
+		w.Header().Set("Cache-Control", "public, max-age=3600")
+		http.ServeFile(w, r, icon)
+		return true
+	}
+	if app.Licensed {
+		ccs := filepath.Join("./site/oss/ccs", classicTitleIDForApp(app), "FFFD0000")
+		if info, err := os.Stat(ccs); err == nil && !info.IsDir() {
+			w.Header().Set("Content-Type", "image/gif")
+			w.Header().Set("Cache-Control", "public, max-age=3600")
+			http.ServeFile(w, r, ccs)
+			return true
+		}
+	}
+	return false
 }
 
 // downloadTarget returns the redirect URL for a title's WAD/package download.
@@ -570,12 +647,9 @@ func (s *storefront) classicSiteHandler(soap http.Handler) http.Handler {
 		}
 		if strings.HasPrefix(r.URL.Path, "/icons/") {
 			slug := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/icons/"), ".png")
-			if _, ok := s.bySlug[slug]; !ok || !safeSlug.MatchString(slug) {
+			if !s.serveShopIcon(w, r, slug) {
 				http.NotFound(w, r)
-				return
 			}
-			w.Header().Set("X-Content-Type-Options", "nosniff")
-			http.ServeFile(w, r, filepath.Join("./icons", slug+".png"))
 			return
 		}
 		if strings.HasPrefix(r.URL.Path, "/oss/ccs/") {
@@ -583,11 +657,7 @@ func (s *storefront) classicSiteHandler(soap http.Handler) http.Handler {
 			if len(parts) == 2 {
 				for _, app := range s.apps {
 					if classicTitleIDForApp(app) == strings.ToUpper(parts[0]) {
-						icon := filepath.Join("./icons", app.Slug+".png")
-						if _, err := os.Stat(icon); err == nil {
-							w.Header().Set("Cache-Control", "public, max-age=3600")
-							w.Header().Set("Content-Type", "image/png")
-							http.ServeFile(w, r, icon)
+						if s.serveShopIcon(w, r, app.Slug) {
 							return
 						}
 					}

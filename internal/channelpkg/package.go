@@ -23,7 +23,7 @@ type Manifest struct {
 	Kind string `json:"kind,omitempty"`
 }
 
-var TitlePattern = regexp.MustCompile(`(?i)^0001000[15][0-9a-f]{8}$`)
+var TitlePattern = regexp.MustCompile(`(?i)^0001000[0-9a-f][0-9a-f]{8}$`)
 var FilePattern = regexp.MustCompile(`(?i)^(tmd(\.[0-9]{1,5})?|[0-9a-f]{8})$`)
 
 // Import validates every decrypted content before atomically publishing a new package.
@@ -123,7 +123,7 @@ func importPackage(input, root, slug, kind, expectedTitle string, replace bool) 
 	m.TitleID = strings.ToLower(m.TitleID)
 	m.Version = w.TMD.TitleVersion
 	if !TitlePattern.MatchString(m.TitleID) {
-		return m, errors.New("only application-channel title IDs are accepted; IOS, system channels and the shop itself are excluded")
+		return m, errors.New("only application-channel title IDs are accepted; IOS titles are excluded")
 	}
 	if expectedTitle != "" && m.TitleID != strings.ToLower(expectedTitle) {
 		return m, errors.New("channel title ID does not match the catalog")
