@@ -383,13 +383,57 @@ func (s *storefront) classicGamesJS() []byte {
 
 func classicWelcomeFallbackJS() []byte {
 	return []byte(`(function(){
-var page=0;var fillRetries=0;var timer=null;
+var page=0;var fillRetries=0;var timer=null;var animating=false;
 // The shop steps to the next list on its own every few seconds
 // (SCROLL_COUNT 36 x 160ms); an arrow press starts the wait again.
 var STEP=6000;
 var lists=5;
+// W_01's own slide tables: recroot sits at 18px, the outgoing list sweeps
+// out in 16ms steps, the list is swapped while it is off screen, and the new
+// list slides back in. The heading trails 11px behind recroot.
+var OUT_LEFT=[18,17,13,-2,-37,-98,-185,-288,-393,-482,-541,-873,-873];
+var IN_RIGHT=[221,135,74,38,23,19,18];
+var OUT_RIGHT=[18,19,23,38,74,135,221,325,430,519,578,604,612];
+var IN_LEFT=[-185,-98,-37,-2,13,17,18];
 function isNew(id){if(typeof homeNew=='undefined')return false;for(var i=0;i<homeNew.length;i++)if(homeNew[i]==id)return true;return false;}
 function display(id,on){var n=document.getElementById(id);if(n)n.style.display=on?'':'none';}
+function setPos(left){
+ var root=document.getElementById('recroot');
+ if(root){root.style.left=left+'px';root.style.top='70px';}
+ var heading=document.getElementById('txtSoftList');
+ if(heading){heading.style.left=(left+11)+'px';heading.style.top='25px';}
+ var spacer=document.getElementById('SoftListSpacer');
+ if(spacer){spacer.style.left=(left+11)+'px';spacer.style.top='25px';}
+}
+function ensurePageChangeAudio(){
+ // The browser shell is the untouched reference index.html, so the sample
+ // element is created on first use and registered with the shell's sound list
+ // so the sound slider controls it like every other effect.
+ var doc=null;try{doc=parent.document;}catch(e){}
+ if(!doc)return null;
+ var audio=null;
+ try{audio=doc.getElementById('cSE_PageChange');}catch(e){}
+ if(audio)return audio;
+ try{
+  audio=doc.createElement('audio');
+  audio.id='cSE_PageChange';
+  audio.preload='auto';
+  audio.src='/snd/page_change.mp3';
+  (doc.body||doc.documentElement).appendChild(audio);
+  var view=doc.defaultView;
+  if(view&&view.soundlist&&view.soundlist.push)view.soundlist.push(audio);
+ }catch(e){audio=null;}
+ return audio;
+}
+function pageChangeSound(){
+ var audio=ensurePageChangeAudio();
+ if(audio){
+  try{var view=parent;if(view&&typeof view.soundvol=='number')audio.volume=view.soundvol/100;}catch(e){}
+  try{audio.currentTime=0;var p=audio.play();if(p&&p['catch'])p['catch'](function(){});return;}catch(e){}
+ }
+ // Native Shop clients have no HTML audio; use the shop's decide tone.
+ try{if(typeof snd!='undefined')snd.playSE(cSE_Decide);}catch(e){}
+}
 function tile(title,position){
  if(!title){display('rec0'+position,false);display('new0'+position,false);return;}
  var imageBox=document.getElementById('soft0'+position);
@@ -426,19 +470,55 @@ function fill(){
   if(page==0)heading.innerHTML='<span class="style1">Wii Shop Channel</span><span class="style2">Recommended Titles</span>';
   else{var label=(typeof homedata!='undefined'&&homedata[1]&&homedata[1][page-1])||'';heading.innerHTML='<nobr><span class="style1">'+label+'</span></nobr>';}
  }
+ preload();
 }
-function schedule(){if(timer)clearTimeout(timer);timer=setTimeout(function(){page=(page+1)%lists;fill();schedule();},STEP);}
+function preload(){
+ // Cache the next list while this one is on screen so a slide never shows
+ // an image that is still loading.
+ if(typeof games=='undefined'||!games)return;
+ var start=((page+1)%lists)*4;
+ for(var i=0;i<4;i++){
+  var title=games[start+i];
+  if(title&&title.thumbnail){var image=new Image();image.src=title.thumbnail;}
+ }
+}
+function go(delta){
+ if(animating)return;
+ if(typeof games=='undefined'||!games||!games.length){fill();return;}
+ animating=true;
+ if(timer){clearTimeout(timer);timer=null;}
+ pageChangeSound();
+ var outgoing=(delta>0)?OUT_LEFT:OUT_RIGHT;
+ var incoming=(delta>0)?IN_RIGHT:IN_LEFT;
+ var frame=0;
+ function slideOut(){
+  setPos(outgoing[frame]);frame++;
+  if(frame<outgoing.length){setTimeout(slideOut,16);return;}
+  page=(page+delta+lists)%lists;
+  fill();
+  frame=0;
+  setTimeout(slideIn,16);
+ }
+ function slideIn(){
+  setPos(incoming[frame]);frame++;
+  if(frame<incoming.length){setTimeout(slideIn,16);return;}
+  setPos(18);animating=false;schedule();
+ }
+ slideOut();
+}
+function schedule(){if(timer)clearTimeout(timer);timer=setTimeout(function(){go(1);},STEP);}
 window.add_scroll_counter=function(){};
 // start_animation_arrow is left to the page: the arrows bob as on the shop.
-window.change_up_RecommendedTitles=function(){page=(page+1)%lists;fill();schedule();};
-window.change_down_RecommendedTitles=function(){page=(page+lists-1)%lists;fill();schedule();};
+window.change_up_RecommendedTitles=function(){go(1);};
+window.change_down_RecommendedTitles=function(){go(-1);};
 function arrows(){
  // Keep the page's own arrow positions (top 118px, stopped frames at 108px);
- // only wire the clicks to the lists.
- var ids=[['posLeftArrowID',change_down_RecommendedTitles],['posStopLeftArrowID',change_down_RecommendedTitles],['posRightArrowID',change_up_RecommendedTitles],['posStopRightArrowID',change_up_RecommendedTitles]];
+ // only wire the clicks to the lists. go() plays the page-change sound and
+ // restarts the six second wait, exactly like an arrow on the real shop.
+ var ids=[['posLeftArrowID',-1],['posStopLeftArrowID',-1],['posRightArrowID',1],['posStopRightArrowID',1]];
  for(var i=0;i<ids.length;i++){
   var node=document.getElementById(ids[i][0]);if(!node)continue;
-  node.style.cursor='pointer';node.onclick=(function(go){return function(){try{if(typeof snd!='undefined')snd.playSE(cSE_Decide);}catch(e){}go();return false;};})(ids[i][1]);
+  node.style.cursor='pointer';node.onclick=(function(delta){return function(){go(delta);return false;};})(ids[i][1]);
  }
 }
 function directShopHome(){
@@ -453,7 +533,7 @@ function directShopHome(){
  };
 }
 // W_01 has no rules of dots; the shop and its revivals draw none on this page.
-if(window.setTimeout)setTimeout(function(){fill();arrows();schedule();},900);else{fill();arrows();}
+if(window.setTimeout)setTimeout(function(){fill();arrows();ensurePageChangeAudio();schedule();},900);else{fill();arrows();ensurePageChangeAudio();}
 if(window.setTimeout)setTimeout(directShopHome,100);else directShopHome();
 })();`)
 }
@@ -507,10 +587,10 @@ if(window.setTimeout){setTimeout(makeDownloadButton,700);if(window.addEventListe
 // and tries to play HTML audio from its parent document. Wii Opera rejects
 // that syntax and the Shop channel already supplies a native wiiSound object.
 func classicSoundJS() []byte {
-	return []byte(`var cSE_Slide=1,cSE_Forcus=2,cSE_Decide=3,cSE_Cancel=4,cSE_Choise=5,cSE_Error=6,cSE_AddPoint=7,cSE_Finish=7;
+	return []byte(`var cSE_Slide=1,cSE_Forcus=2,cSE_Decide=3,cSE_Cancel=4,cSE_Choise=5,cSE_Error=6,cSE_AddPoint=7,cSE_Finish=7,cSE_PageChange=8;
 var snd;var shroomNativeSound=navigator.userAgent.indexOf('Wii Shop Channel/')!=-1||navigator.userAgent.indexOf('Nintendo Wii')!=-1;
 if(shroomNativeSound){try{if(typeof wiiSound!='undefined')snd=new wiiSound();}catch(e){}}
-if(!snd)snd={playSE:function(code){try{var names={2:'cSE_Forcus',3:'cSE_Decide',4:'cSE_Cancel',7:'cSE_Finish'};var a=parent.document.getElementById(names[code]);if(a){a.currentTime=0;var p=a.play();if(p&&p['catch'])p['catch'](function(){});}}catch(e){}},playBGM:function(){}};
+if(!snd)snd={playSE:function(code){try{var names={2:'cSE_Forcus',3:'cSE_Decide',4:'cSE_Cancel',7:'cSE_Finish',8:'cSE_PageChange'};var a=parent.document.getElementById(names[code]);if(a){a.currentTime=0;var p=a.play();if(p&&p['catch'])p['catch'](function(){});}}catch(e){}},playBGM:function(){}};
 function wiiFocusSound(){snd.playSE(cSE_Forcus);}function wiiSelectSound(){snd.playSE(cSE_Decide);}function wiiCancelSound(){snd.playSE(cSE_Cancel);}function wiiFinishSound(){snd.playSE(cSE_Finish);}var soundCheck=true;`)
 }
 
@@ -632,33 +712,31 @@ if(window.setTimeout){setTimeout(render,250);if(window.addEventListener)window.a
 })();`)
 }
 
-// serveShopIcon serves a title's icon. Homebrew titles (and any pre-rendered
-// PNG in ./icons/) are served as PNG. Real licensed Wii Shop titles have no
-// PNG in ./icons/; their authentic icon is a GIF texture in the original shop
-// layout site/oss/ccs/<titleId>/FFFD0000, which is served directly so the
-// catalog shows the real icon without a conversion step.
+// serveShopIcon serves a title's icon: a homebrew PNG from ./icons/, the best
+// archived image from site/oss/ccs/<titleId>/ (licenses keep the icon at a
+// numbered file, not always FFFD0000), a regional variant's or sibling
+// release's artwork, or finally a generated tile so the thumbnail is never
+// broken.
 func (s *storefront) serveShopIcon(w http.ResponseWriter, r *http.Request, slug string) bool {
 	app, ok := s.bySlug[slug]
 	if !ok || !safeSlug.MatchString(slug) {
 		return false
 	}
-	icon := filepath.Join("./icons", slug+".png")
-	if info, err := os.Stat(icon); err == nil && !info.IsDir() {
-		w.Header().Set("Content-Type", "image/png")
+	if ic, ok := s.shopIconFor(app); ok {
+		w.Header().Set("Content-Type", ic.mime)
 		w.Header().Set("Cache-Control", "public, max-age=3600")
-		http.ServeFile(w, r, icon)
+		http.ServeFile(w, r, ic.path)
 		return true
 	}
-	if app.Licensed {
-		ccs := filepath.Join("./site/oss/ccs", classicTitleIDForApp(app), "FFFD0000")
-		if info, err := os.Stat(ccs); err == nil && !info.IsDir() {
-			w.Header().Set("Content-Type", "image/gif")
-			w.Header().Set("Cache-Control", "public, max-age=3600")
-			http.ServeFile(w, r, ccs)
-			return true
-		}
+	data := placeholderIcon(app)
+	if len(data) == 0 {
+		return false
 	}
-	return false
+	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("Cache-Control", "public, max-age=3600")
+	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
+	w.Write(data)
+	return true
 }
 
 // downloadTarget returns the redirect URL for a title's WAD/package download.

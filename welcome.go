@@ -9,8 +9,6 @@ package main
 import (
 	"encoding/json"
 	"net/http"
-	"os"
-	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -25,16 +23,11 @@ func welcomeName(app catalogApp) string {
 	return strings.TrimSpace(welcomeNonAlnum.ReplaceAllString(strings.ToLower(n), " "))
 }
 
-// hasShopIcon reports whether serveShopIcon has an image for the title.
-func hasShopIcon(app catalogApp) bool {
-	if info, err := os.Stat(filepath.Join("./icons", app.Slug+".png")); err == nil && !info.IsDir() {
-		return true
-	}
-	if !app.Licensed {
-		return false
-	}
-	info, err := os.Stat(filepath.Join("./site/oss/ccs", classicTitleIDForApp(app), "FFFD0000"))
-	return err == nil && !info.IsDir()
+// hasShopIcon reports whether the title has real archived artwork (homebrew
+// PNG, shop icon, variant, or sibling release) rather than a generated tile.
+func (s *storefront) hasShopIcon(app catalogApp) bool {
+	_, ok := s.shopIconFor(app)
+	return ok
 }
 
 // availableIn reports whether a title has a release the console's region can
@@ -68,7 +61,7 @@ var (
 func (s *storefront) welcomeLists(region string) []welcomeList {
 	used := map[string]bool{}
 	ok := func(app catalogApp) bool {
-		return !used[app.Slug] && availableIn(app, region) && hasShopIcon(app)
+		return !used[app.Slug] && availableIn(app, region) && s.hasShopIcon(app)
 	}
 	take := func(list *welcomeList, app catalogApp) {
 		used[app.Slug] = true

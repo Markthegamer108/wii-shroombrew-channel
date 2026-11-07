@@ -17,28 +17,29 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 //go:embed shop/*
 var shopFiles embed.FS
 
 type catalogApp struct {
-	Slug        string `json:"slug"`
-	Name        string `json:"name"`
+	Slug string `json:"slug"`
+	Name string `json:"name"`
 	// Subtitle is the shop's second title line ("Ocarina of Time" under
 	// "The Legend of Zelda:", "Demo" under a WiiWare game's trial).
-	Subtitle    string `json:"subtitle,omitempty"`
-	Author      string `json:"author"`
-	Category    string `json:"category"`
-	Version     string `json:"version"`
-	Flash       bool   `json:"flash"`
+	Subtitle string `json:"subtitle,omitempty"`
+	Author   string `json:"author"`
+	Category string `json:"category"`
+	Version  string `json:"version"`
+	Flash    bool   `json:"flash"`
 	// Licensed marks a real retail/Wii Shop WAD (Virtual Console, WiiWare,
 	// DLC, channels, IOS) that Shroombrew does not host: the console's native
 	// download imports the WAD directly from its external URL (mariocube) on
 	// first use, caching it locally in ./channels/. Price is the authentic
 	// Wii Points price (0 when the catalog falls back to derived pricing).
-	Licensed bool `json:"licensed"`
-	Price    int  `json:"price"`
+	Licensed    bool `json:"licensed"`
+	Price       int  `json:"price"`
 	Description struct {
 		Short string `json:"short"`
 		Long  string `json:"long"`
@@ -91,14 +92,18 @@ type catalogVariant struct {
 	Price       int    `json:"price,omitempty"`
 }
 type storefront struct {
-	apps         []catalogApp
-	bySlug       map[string]catalogApp
-	view         *template.Template
-	installs     *installManager
+	apps              []catalogApp
+	bySlug            map[string]catalogApp
+	view              *template.Template
+	installs          *installManager
 	channels          *channelBuilder
 	channelsRoot      string
 	iconsRoot         string
 	flashTemplatePath string
+	// iconMu guards iconCache, the resolved thumbnail for every title seen
+	// so far (a zero path means the title has no archived artwork).
+	iconMu    sync.Mutex
+	iconCache map[string]shopIcon
 }
 type shopPage struct {
 	Screen       string
