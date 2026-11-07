@@ -272,11 +272,11 @@ func (s *storefront) checkout(w http.ResponseWriter, r *http.Request, app catalo
 		http.Error(w, "Method not allowed", 405)
 		return
 	}
-	controls := strings.Join(app.Peripherals, ", ")
+	controls := controllerText(app)
 	if controls == "" {
 		controls = "Controller information not supplied"
 	}
-	data := archivedCheckoutData{Page: "B_08", Name: app.Name, Controllers: controls, Balance: points, Price: price, Remaining: points - price, CSRF: csrfToken(id), Action: r.URL.Path, Back: "/oss/serv/B_05.html?titleId=" + classicTitleIDForApp(app), Next: r.URL.Path + "?confirm=1"}
+	data := archivedCheckoutData{Page: "B_08", Name: app.Name, Controllers: controls, ControllerIcons: controllerIcons(app), ControllerExtra: controllerExtra(app), Balance: points, Price: price, Remaining: points - price, CSRF: csrfToken(id), Action: r.URL.Path, Back: "/oss/serv/B_05.html?titleId=" + classicTitleIDForApp(app), Next: r.URL.Path + "?confirm=1"}
 	if r.URL.Query().Get("confirm") == "1" {
 		data.Page = "B_09"
 		data.Back = r.URL.Path

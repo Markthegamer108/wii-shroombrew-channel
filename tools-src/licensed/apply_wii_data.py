@@ -74,6 +74,48 @@ def clean_name(nm):
     nm = re.sub(r"<[^>]+>", "", nm)
     return re.sub(r"\s+", " ", nm).strip()
 
+def html_text(s):
+    s = re.sub(r"<br\s*/?>", " ", s or "", flags=re.I)
+    s = html.unescape(re.sub(r"<[^>]+>", "", s))
+    return re.sub(r"\s+", " ", s).strip()
+
+def parse_controllers(raw):
+    """Split the shop's controller block into icon keys and its two notes.
+
+    games.json stores the B_08 markup verbatim: one <img> per supported
+    controller (banner/B_08_<Key>.gif), the requirement sentence in #text03-01
+    and an optional extra note (60Hz, Rumble Pak, ...) in #text04-01.
+    """
+    icons = []
+    for src in re.findall(r'src="[^"]*B_08_([A-Za-z]+)\.gif"', raw or ""):
+        if src not in icons:
+            icons.append(src)
+    note = extra = ""
+    m = re.search(r'id="text03-01".*?contentsBlackS">(.*?)</div>', raw or "", re.S)
+    if m:
+        note = html_text(m.group(1))
+    m = re.search(r'id="text04-01".*?contentsBlackS">(.*?)</div>', raw or "", re.S)
+    if m:
+        extra = html_text(m.group(1))
+    return icons, note, extra
+
+def clean_players(s):
+    # "For 1 player(s)" / "For 1-2 player(s)" -> the shop's plain wording.
+    s = (s or "").strip()
+    m = re.match(r"^For (\d+)(?:-(\d+))? player", s)
+    if not m:
+        return s
+    if m.group(2):
+        return f"For {m.group(1)}-{m.group(2)} players"
+    return "For 1 player" if m.group(1) == "1" else f"For {m.group(1)} players"
+
+def players_from_any(s):
+    # Any language ("Joueurs: 1-2", "1～4人", ...) -> English from the counts.
+    m = re.search(r"(\d+)\s*(?:[-–～~]\s*(\d+))?", s or "")
+    if not m:
+        return ""
+    return clean_players("For " + m.group(1) + ("-" + m.group(2) if m.group(2) else "") + " player")
+
 def parse_date(s):
     if not s:
         return 0
@@ -153,7 +195,7 @@ def main():
             descs[tid] = d
     print(f"games.json ids: {len(byid)}  english descriptions: {len(descs)}", file=sys.stderr)
 
-    changed_name = changed_price = changed_pub = changed_date = changed_desc = 0
+    changed_name = changed_price = changed_pub = changed_date = changed_desc = changed_ctrl = 0
     out = []
     for a in cat:
         tid = a.get("shop", {}).get("title_id", "")
@@ -200,9 +242,36 @@ def main():
                 entry["genre"] = genre
             if rating:
                 entry["rating"] = rating
+            details = html_text(wm.get("ratingdetails", ""))
+            if rating and details:
+                entry["rating_details"] = details
+        if wm:
+            # Controller icons, player counts and size are language-neutral, so
+            # titles with no English listing (mostly Japan-only) still get them.
+            # The notes are only kept when they are English.
+            english = wm["language"].upper() == "EN"
+            icons, note, extra = parse_controllers(wm.get("controllers", ""))
+            if icons:
+                entry["controllers"] = icons
+                changed_ctrl += 1
+            if note and english:
+                entry["controller_note"] = note
+            if extra and english:
+                entry["controller_extra"] = extra
+            players = clean_players(wm.get("players", ""))
+            if not english:
+                players = players_from_any(players)
+            if players:
+                entry["players"] = players
+            try:
+                size = int(wm.get("size", "") or 0)
+            except ValueError:
+                size = 0
+            if size > 0:
+                entry["size"] = size
         out.append(entry)
 
-    print(f"changed: name {changed_name} price {changed_price} pub {changed_pub} date {changed_date} desc {changed_desc}", file=sys.stderr)
+    print(f"changed: name {changed_name} price {changed_price} pub {changed_pub} date {changed_date} desc {changed_desc} controllers {changed_ctrl}", file=sys.stderr)
     with open(sys.argv[3], "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, indent=1)
     print(f"wrote {sys.argv[3]} ({len(out)} apps)", file=sys.stderr)

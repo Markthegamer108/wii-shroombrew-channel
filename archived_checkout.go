@@ -17,6 +17,10 @@ var archivedShopTemplates = template.Must(template.ParseFS(archivedShopFiles, "s
 
 type archivedCheckoutData struct {
 	Page, Name, Controllers, CSRF, Action, Back, Next, Job, State, Message, Code, Mode string
+	// ControllerIcons are B_08's controller images (banner/B_08_<key>.gif)
+	// and ControllerExtra its second note; see controllerIcons.
+	ControllerIcons []string
+	ControllerExtra string
 	Balance, Price, Remaining                                                          int
 	// FSBlocks is the channel's size on the console in 16 KB filesystem blocks;
 	// the confirmation page shows it in 128 KB Wii blocks like the original.

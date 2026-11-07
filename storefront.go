@@ -58,6 +58,18 @@ type catalogApp struct {
 	Platform string `json:"platform,omitempty"`
 	Genre    string `json:"genre,omitempty"`
 	Rating   string `json:"rating,omitempty"`
+	// RatingDetails are the ESRB content descriptors ("Mild Fantasy Violence").
+	RatingDetails string `json:"rating_details,omitempty"`
+	// Controllers are the shop's controller icon keys (RvlCtrl, NunchukCtrl,
+	// ClassicCtrl, GcCtrl, ...; images banner/B_08_<key>.gif) in the order the
+	// real B_08 page showed them. ControllerNote is its requirement sentence
+	// and ControllerExtra the optional extra note (60Hz, Rumble Pak, ...).
+	Controllers     []string `json:"controllers,omitempty"`
+	ControllerNote  string   `json:"controller_note,omitempty"`
+	ControllerExtra string   `json:"controller_extra,omitempty"`
+	Players         string   `json:"players,omitempty"`
+	// Size is the real title's size in bytes when the catalog knows it.
+	Size int64 `json:"size,omitempty"`
 	// Variants lists every region-locked release of a collapsed licensed title
 	// (Europe/USA/Japan/Korea/...). The console's region selects which one the
 	// native download imports, so one catalog row serves the right WAD for any
@@ -471,8 +483,8 @@ func (s *storefront) confirmWiiPurchase(w http.ResponseWriter, r *http.Request, 
 	}
 	price := classicPriceFor(app)
 	controllers := "See title details"
-	if len(app.Peripherals) > 0 {
-		controllers = strings.Join(app.Peripherals, ", ")
+	if text := controllerText(app); text != "" {
+		controllers = text
 	}
 	button := fmt.Sprintf(`<form method="post" action="/wii-install/title/%s"><p class="center">%s</p></form>`, classicTitleIDForApp(app), uiSubmit("", "", "Download"))
 	if balance < price {

@@ -397,23 +397,35 @@ func (s *storefront) featureInfo(w http.ResponseWriter, r *http.Request) {
 	case "/controllers":
 		title = tl(lang, "w_ctrl_title")
 		id := strings.ToUpper(r.URL.Query().Get("titleId"))
-		found := false
-		for _, app := range s.apps {
-			if classicTitleIDForApp(app) == id {
-				found = true
-				controls := strings.Join(app.Peripherals, ", ")
-				if controls == "" {
-					controls = tl(lang, "w_ctrl_none")
-				}
-				panel = `<div class="panel plain">`
-				content = `<p class="blue" style="font-size:18px">` + esc(app.Name) + "</p><p>" + esc(controls) + "</p>"
-				back = "/oss/serv/B_05.html?titleId=" + id
-			}
-		}
-		if !found {
+		app, ok := s.appByTitleID(id)
+		if !ok {
 			http.NotFound(w, r)
 			return
 		}
+		controls := controllerText(app)
+		if controls == "" {
+			controls = tl(lang, "w_ctrl_none")
+		}
+		// The controller images the real B_08 page showed, one per controller.
+		icons := ""
+		for _, key := range controllerIcons(app) {
+			if name, known := controllerNames[key]; known {
+				icons += `<img src="/oss/oss/common/images/banner/B_08_` + key + `.gif" width="68" height="51" alt="` + esc(name) + `" style="margin:0 4px">`
+			}
+		}
+		panel = `<div class="panel plain">`
+		content = `<p class="blue" style="font-size:18px">` + esc(app.Name) + `</p>`
+		if icons != "" {
+			content += `<p class="center">` + icons + `</p>`
+		}
+		content += `<p>` + esc(controls) + `</p>`
+		if extra := controllerExtra(app); extra != "" {
+			content += `<p class="small">` + esc(extra) + `</p>`
+		}
+		if app.Players != "" {
+			content += `<p>` + esc(app.Players) + `</p>`
+		}
+		back = "/oss/serv/B_05.html?titleId=" + id
 	case "/settings":
 		title = tl(lang, "w_settings_title")
 		// Like the original S_01: a column of icon banners, then the shop's

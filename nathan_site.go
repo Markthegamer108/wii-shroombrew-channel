@@ -93,27 +93,33 @@ func shopServiceHosts(text, domain string) string {
 }
 
 type classicTitle struct {
-	ID            string `json:"id"`
-	Title1        string `json:"title1"`
-	Title2        string `json:"title2"`
-	Console       string `json:"console"`
-	Region        string `json:"region"`
-	Language      string `json:"language"`
-	Publisher     string `json:"publisher"`
-	Genre         string `json:"genre"`
-	Date          string `json:"date"`
-	ReleaseUnix   int64  `json:"releaseUnix"`
-	Added         string `json:"added"`
-	Points        string `json:"points"`
-	Players       string `json:"players"`
-	Attributes    string `json:"attributes"`
-	Controllers   string `json:"controllers"`
-	Rating        string `json:"rating"`
-	RatingDetails string `json:"ratingdetails"`
-	Size          int64  `json:"size"`
-	Link          string `json:"link"`
-	Thumbnail     string `json:"thumbnail"`
-	Description   string `json:"description"`
+	ID          string `json:"id"`
+	Title1      string `json:"title1"`
+	Title2      string `json:"title2"`
+	Console     string `json:"console"`
+	Region      string `json:"region"`
+	Language    string `json:"language"`
+	Publisher   string `json:"publisher"`
+	Genre       string `json:"genre"`
+	Date        string `json:"date"`
+	ReleaseUnix int64  `json:"releaseUnix"`
+	Added       string `json:"added"`
+	Points      string `json:"points"`
+	Players     string `json:"players"`
+	Attributes  string `json:"attributes"`
+	Controllers string `json:"controllers"`
+	// ControllerIcons and ControllerExtra feed the detail page's controller
+	// images; DisplayGenre is the real genre (Genre stays the shop section
+	// the catalog filters and groups by).
+	ControllerIcons []string `json:"controllerIcons"`
+	ControllerExtra string   `json:"controllerExtra,omitempty"`
+	DisplayGenre    string   `json:"displayGenre,omitempty"`
+	Rating          string   `json:"rating"`
+	RatingDetails   string   `json:"ratingdetails"`
+	Size            int64    `json:"size"`
+	Link            string   `json:"link"`
+	Thumbnail       string   `json:"thumbnail"`
+	Description     string   `json:"description"`
 }
 
 func classicTitleID(slug string) string {
@@ -164,6 +170,74 @@ func consoleLabel(category string) string {
 		return "Wii Channel"
 	}
 	return "Homebrew"
+}
+
+// controllerNames names each shop controller icon key (banner/B_08_<key>.gif).
+var controllerNames = map[string]string{
+	"RvlCtrl": "Wii Remote", "NunchukCtrl": "Nunchuk", "ClassicCtrl": "Classic Controller",
+	"GcCtrl": "Nintendo GameCube Controller", "BalanceCtrl": "Wii Balance Board", "ZapperCtrl": "Wii Zapper",
+	"WheelCtrl": "Wii Wheel", "MotionCtrl": "Wii MotionPlus", "KeyboardCtrl": "USB Keyboard",
+	"SpeakCtrl": "Wii Speak", "MicrophoneCtrl": "Microphone", "DSCtrl": "Nintendo DS", "TWLCtrl": "Nintendo DSi",
+}
+
+// peripheralIcons maps Open Shop Channel peripheral names to the same icons.
+var peripheralIcons = map[string]string{
+	"Wii Remote": "RvlCtrl", "Nunchuk": "NunchukCtrl", "Classic Controller": "ClassicCtrl",
+	"GameCube Controller": "GcCtrl", "USB Keyboard": "KeyboardCtrl", "Wii Zapper": "ZapperCtrl",
+}
+
+// controllerIcons returns the controller icon keys shown for a title: the
+// real shop's list for licensed titles, mapped peripherals for homebrew.
+func controllerIcons(app catalogApp) []string {
+	icons := []string{}
+	if len(app.Controllers) > 0 {
+		for _, key := range app.Controllers {
+			if _, ok := controllerNames[key]; ok && !containsStr(icons, key) {
+				icons = append(icons, key)
+			}
+		}
+		return icons
+	}
+	for _, p := range app.Peripherals {
+		if key, ok := peripheralIcons[p]; ok && !containsStr(icons, key) {
+			icons = append(icons, key)
+		}
+	}
+	return icons
+}
+
+// controllerText is the controller sentence shown under the icons: the real
+// shop's wording when known, else one built from the icons. Empty when the
+// title lists no controllers.
+func controllerText(app catalogApp) string {
+	if app.ControllerNote != "" {
+		return app.ControllerNote
+	}
+	names := []string{}
+	for _, key := range controllerIcons(app) {
+		if name, ok := controllerNames[key]; ok {
+			names = append(names, name)
+		}
+	}
+	switch len(names) {
+	case 0:
+		return ""
+	case 1:
+		return "This software can be used with the " + names[0] + "."
+	}
+	return "This software can be used with the " + strings.Join(names[:len(names)-1], ", ") + " or " + names[len(names)-1] + "."
+}
+
+// controllerExtra is the second note under the controllers (60Hz, Rumble
+// Pak, ...); for homebrew it notes SDHC card support.
+func controllerExtra(app catalogApp) string {
+	if app.ControllerExtra != "" {
+		return app.ControllerExtra
+	}
+	if containsStr(app.Peripherals, "SDHC") {
+		return "Supports SDHC cards."
+	}
+	return ""
 }
 
 // regionFor returns the console's coarse region from the cookie set when the
@@ -257,6 +331,9 @@ func (s *storefront) classicTitles() []classicTitle {
 			releaseDate = time.Unix(app.ReleaseDate, 0).UTC().Format("Jan 2, 2006")
 		}
 		size := app.FileSize.ZipUncompressed
+		if app.Size > 0 {
+			size = app.Size
+		}
 		if size == 0 {
 			size = app.Shop.ContentsSize
 		}
@@ -271,8 +348,9 @@ func (s *storefront) classicTitles() []classicTitle {
 		titles = append(titles, classicTitle{
 			ID: classicTitleIDForApp(app), Title1: app.Name, Console: console,
 			Region: "US", Language: "EN", Publisher: app.Author, Genre: category,
-			Date: releaseDate, ReleaseUnix: app.ReleaseDate, Added: releaseDate, Points: strconv.Itoa(classicPriceFor(app)), Players: "", Attributes: "",
-			Controllers: strings.Join(app.Peripherals, ", "), Rating: app.Rating, RatingDetails: "", Size: size,
+			Date: releaseDate, ReleaseUnix: app.ReleaseDate, Added: releaseDate, Points: strconv.Itoa(classicPriceFor(app)), Players: app.Players, Attributes: "",
+			Controllers: controllerText(app), ControllerIcons: controllerIcons(app), ControllerExtra: controllerExtra(app), DisplayGenre: app.Genre,
+			Rating: app.Rating, RatingDetails: app.RatingDetails, Size: size,
 			Link:      "/download/" + app.Slug,
 			Thumbnail: "/icons/" + app.Slug + ".png", Description: app.Description.Short,
 		})
@@ -413,7 +491,7 @@ function makeDownloadButton(){
  var game=null;
  if(typeof gameslist!='undefined')for(var i=0;i<gameslist.length;i++){if(gameslist[i]&&gameslist[i].id==selected){game=gameslist[i];break;}}
  if(!game)return;
- put('Title1',game.title1);put('Title2',game.title2);put('DisplayCategory',game.genre);
+ put('Title1',game.title1);put('Title2',game.title2);put('DisplayCategory',game.displayGenre||game.genre);
  put('PublisherName',game.publisher);put('Description',game.description);put('ReleaseDate',game.date?'Released '+game.date:'');
  put('Console',game.console||'Homebrew');put('NumPlayers',game.players||'');
  var thumb=document.getElementById('Thumbnail');if(thumb)thumb.src=game.thumbnail;
@@ -428,7 +506,15 @@ function makeDownloadButton(){
  }
  var control=document.getElementById('ControlAnchor');if(control){control.href='/controllers?titleId='+selected;control.onclick=function(){shroomNavigate(control.href);return false;};}
  var buyImage=document.getElementById('Image2');if(buyImage)buyImage.onclick=function(){try{wiiSelectSound();}catch(e){}};
- var ratingIds=['Rating','ESRB_Rating','RatingPic'];for(var r=0;r<ratingIds.length;r++){var rating=document.getElementById(ratingIds[r]);if(rating)rating.style.display='none';}
+ var ratingIds=['Rating','ESRB_Rating','RatingPic'];
+ var esrb={'E':1,'E10':1,'T':1,'M':1,'EC':1,'AO':1,'RP':1};
+ if(game.rating&&esrb[game.rating]){
+  for(var r=0;r<ratingIds.length;r++){var shown=document.getElementById(ratingIds[r]);if(shown)shown.style.display='';}
+  var pic=document.getElementById('RatingPic');if(pic){pic.src='/oss/oss/common/images/Pic_Rating/ESRB/ESRB_'+game.rating+'.gif';pic.alt='ESRB '+game.rating;}
+  put('Descriptors',game.ratingdetails||'');
+ }else{
+  for(var q=0;q<ratingIds.length;q++){var rating=document.getElementById(ratingIds[q]);if(rating)rating.style.display='none';}
+ }
  var unavailable=document.getElementById('notAvailableMsg');if(unavailable)unavailable.style.display='none';
  var gift=document.getElementById('giftButton');if(gift)gift.style.display='none';
 }

@@ -206,7 +206,7 @@ body {
 </div>
 </div>
 <div align="center" id="controller">
-<img height="51" src="/archive-shop/assets/images/banner/B_08_RvlCtrl.gif" width="68"/>
+{{range .ControllerIcons}}<img height="51" src="/oss/oss/common/images/banner/B_08_{{.}}.gif" width="68"/>{{else}}<img height="51" src="/oss/oss/common/images/banner/B_08_RvlCtrl.gif" width="68"/>{{end}}
 </div>
 <div id="text03-01">
 <div align="center">
@@ -215,7 +215,7 @@ body {
 </div>
 <div id="text04-01">
 <div align="center">
-<div align="left" class="contentsBlackS"></div>
+<div align="left" class="contentsBlackS">{{.ControllerExtra}}</div>
 </div>
 </div>
 <form id="archiveForm" action="{{.Action}}" method="post"><input type="hidden" name="csrf" value="{{.CSRF}}"></form><script>var archiveShop={{.}};</script><script src="/archive-shop/mario.js"></script><script src="/archive-shop/checkout.js?v=2"></script></body></html>
