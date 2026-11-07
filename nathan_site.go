@@ -613,7 +613,7 @@ function value(name){var q=location.search.substring(1).split('&');for(var i=0;i
 // platform=WiiWare, platform=Wii Channels in each language); map them to sections.
 function section(){var c=value('category');if(c)return c;if(value('vc')=='true')return 'Virtual Console';var p=value('platform').toLowerCase();if(p.indexOf('wiiware')>=0)return 'WiiWare';if(p.indexOf('virtual')>=0)return 'Virtual Console';if(/channel|kanal|cha.ne|canal/.test(p))return 'Channels';return '';}
 function pageURL(number){var old=location.search.substring(1).split('&');var kept=[];for(var j=0;j<old.length;j++){if(old[j]&&old[j].split('=')[0]!='p')kept.push(old[j]);}kept.push('p='+number);return '/oss/serv/B_04.html?'+kept.join('&');}
-function secURL(section){var old=location.search.substring(1).split('&');var kept=[];for(var j=0;j<old.length;j++){var k0=old[j].split('=')[0];if(old[j]&&k0!='category'&&k0!='genre'&&k0!='p'&&k0!='platform'&&k0!='vc')kept.push(old[j]);}kept.push('category='+encodeURIComponent(section));kept.push('p=1');return '/oss/serv/B_04.html?'+kept.join('&');}
+function secURL(section){var old=location.search.substring(1).split('&');var kept=[];for(var j=0;j<old.length;j++){var k0=old[j].split('=')[0];if(old[j]&&k0!='category'&&k0!='genre'&&k0!='p'&&k0!='platform'&&k0!='vc'&&k0!='hb')kept.push(old[j]);}kept.push('category='+encodeURIComponent(section));kept.push('p=1');return '/oss/serv/B_04.html?'+kept.join('&');}
 function subURL(section,genre){var old=location.search.substring(1).split('&');var kept=[];for(var j=0;j<old.length;j++){var kv=old[j];if(!kv)continue;var k=kv.split('=')[0];if(k!='category'&&k!='genre'&&k!='p'&&k!='platform'&&k!='vc')kept.push(kv);}if(section)kept.push('category='+encodeURIComponent(section));if(genre)kept.push('genre='+encodeURIComponent(genre));kept.push('p=1');return '/oss/serv/B_04.html?'+kept.join('&');}
 function subNav(subs,genre,section){var h='';for(var j=0;j<subs.length;j++){var name=subs[j][0],val=subs[j][1];var active=(genre==val)?'#e60000':'#000';h+='<a href="'+subURL(section,val)+'" style="color:'+active+';text-decoration:underline;margin-right:10px" onclick="wiiSelectSound();shroomNavigate(this.href);return false">'+name+'</a>';}return h;}
 function nav(){
@@ -631,13 +631,13 @@ function nav(){
   info.innerHTML=html;return;
  }
  html='<a href="'+secURL('')+'" style="color:#000;text-decoration:underline;margin-right:10px" onclick="wiiSelectSound();shroomNavigate(this.href);return false">All Titles</a>';
+ // B_30 splits these two sections into Nintendo titles and homebrew (hb=1).
  if(cur=='Virtual Console'){
-  html+='<span style="color:#333;margin-right:10px">Virtual Console:</span>';
-  html+=subNav([['Nintendo licensed','Virtual Console'],['Homebrew emulators','emulators']],genre,cur);
+  html+='<span style="color:#333;margin-right:10px">'+(value('hb')=='1'?'Virtual Console: homebrew emulators':'Virtual Console: Nintendo')+'</span>';
   info.innerHTML=html;return;
  }
  if(cur=='WiiWare'){
-  html+='<span style="color:#333;margin-right:10px">WiiWare (licensed)</span>';
+  html+='<span style="color:#333;margin-right:10px">'+(value('hb')=='1'?'WiiWare: homebrew games':'WiiWare: Nintendo')+'</span>';
   info.innerHTML=html;return;
  }
  if(cur=='Channels'){
@@ -669,7 +669,8 @@ function render(){
    return g==genre;
   }
   if(cat){
-   if(cat=='virtual console')return g=='virtual console'||g=='emulators';
+   if(cat=='virtual console')return value('hb')=='1'?g=='emulators':g=='virtual console';
+   if(cat=='wiiware'&&value('hb')=='1')return g=='games';
    if(cat=='channels')return g=='channels'||g=='games'||g=='utilities'||g=='media'||g=='demos';
    if(cat=='wiiware')return g=='wiiware';
    if(cat=='dlc')return g=='dlc';
