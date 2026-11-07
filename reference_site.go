@@ -8,7 +8,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 // referenceSiteHandler serves the permissioned, unmodified browser recreation
@@ -88,10 +87,8 @@ func referenceSiteHandler(root string, next http.Handler) http.Handler {
 			}
 			text = strings.ReplaceAll(text, "wiishopchannel.net/oss/serv/", r.Host+"/oss/serv/")
 			text = strings.ReplaceAll(text, `page.includes("wiishopchannel.net")`, `page.includes("`+r.Host+`")`)
-			// Christmas music for the web shell, only while the season is open.
-			if active, _ := seasonActive(time.Now()); active && requestPath == "/" && ext == ".html" {
-				text = strings.Replace(text, "</body>", `<script src="/shroombrew-season.js"></script></body>`, 1)
-			}
+			// Seasonal tracks are scheduled by the shell's main.js, which swaps
+			// the BGM on the matching dates, so no extra script is injected here.
 			w.Header().Set("Content-Type", mime.TypeByExtension(ext))
 			// Keep deployments fresh, including the shell's runtime state.
 			w.Header().Set("Cache-Control", "no-cache")

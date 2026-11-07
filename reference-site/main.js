@@ -130,9 +130,17 @@ if (now.getMonth() == 3 && now.getDate() == 1) {
   document.title = "Wiizer Shop Channel";
   var theme1 = new Audio('snd/theme1.mp3');
   var theme2 = new Audio('snd/theme2fool.mp3');
-} else if(now.getMonth() == 11 && now.getDate() >= 1 && now.getDate() <= 26) {
-  var theme1 = new Audio('snd/theme1jolly.mp3');
-  var theme2 = new Audio('snd/theme2jolly.mp3');
+} else if (now.getMonth() == 11) {
+  // December: the Wii Shop Christmas mashup plays all month. One looping
+  // track instead of the usual intro/loop pair, so the whole song plays.
+  var theme1 = new Audio('snd/theme1christmas.mp3');
+  theme1.loop = true;
+  var theme2 = theme1;
+} else if (now.getMonth() == 5 && now.getDate() == 26) {
+  // June 26: "Attentiion" (Wii Shop x Charlie Puth) upload anniversary.
+  var theme1 = new Audio('snd/theme1attention.mp3');
+  theme1.loop = true;
+  var theme2 = theme1;
 } else if(Math.random() < 0.01) {
   if (now.getDay() == 3) {
     var theme1 = new Audio('snd/theme1.mp3');
