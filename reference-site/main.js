@@ -1026,10 +1026,6 @@ function mainloop() {
     marioX = -(canvas.width / 2) / scale - 32;
   }
   
-  if (currentiframe.contentWindow.location.href.includes("wiishopchannel.net/oss/serv/clicker") && !loading && currentiframe.style.zIndex == 2) {
-    currentiframe.contentWindow.gameloop();
-  }
-  
   prevcursor = cursor;
   // FPS stuff
   var thisFrameTime = (thisLoop=new Date) - lastLoop;
