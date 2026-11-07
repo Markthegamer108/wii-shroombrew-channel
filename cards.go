@@ -1,18 +1,8 @@
 package main
 
-// Wii Points cards. The website asks the server to mint a card; the server
-// stores only a keyed hash of the number, so a database leak reveals no usable
-// codes. A card is worth 1000 points, works once, and unused cards expire.
-// Wii Points are free, so any other 16-digit number redeems as a standard
-// 1000-point card too, as on the WiiMart revival; minting stays for the
-// website's card page.
-//
-// Abuse limits (the endpoint is public, so it is a target):
-//   - 15 s cooldown between cards per network address (IPv6 grouped by /64)
-//   - at most 25 unused cards and 300 new cards per day per address
-//   - at most 600 new cards per 10 minutes across the whole service
-//   - redeeming locks out an address or wallet after 8 entries that are not
-//     card numbers / 10 min
+// Cards are minted on the website and stored as a keyed hash, so a leak of
+// the database gives away nothing usable. Any other 16-digit Luhn number
+// redeems as a standard 1000-point card, as on the old WiiMart revival.
 
 import (
 	"context"
@@ -111,12 +101,10 @@ func formatCard(n string) string {
 
 func cardHash(num string) string { return hmacHex("card", num) }
 
-// validCardPoints are the Wii Points amounts a minted card can carry.
+// Card values you can mint.
 var validCardPoints = map[int]bool{1000: true, 2000: true, 3000: true, 4000: true, 5000: true}
 
-// generateCard mints one card for the caller's address, or says how long to wait.
-// points must be one of validCardPoints; it is stored on the card so redeeming
-// it gives exactly that many points.
+// Mint a card worth points. The value is stored so redeeming pays exactly that much.
 func generateCard(ctx context.Context, ip string, points int) (string, error) {
 	if !validCardPoints[points] {
 		return "", fmt.Errorf("invalid card value")
