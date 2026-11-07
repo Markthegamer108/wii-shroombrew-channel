@@ -406,6 +406,8 @@ function setPos(left){
  if(spacer){spacer.style.left=(left+11)+'px';spacer.style.top='25px';}
 }
 function ensurePageChangeAudio(){
+ // Native Shop clients have no HTML audio; they use their own sound engine.
+ if(typeof shroomNativeSound!='undefined'&&shroomNativeSound)return null;
  // The browser shell is the untouched reference index.html, so the sample
  // element is created on first use and registered with the shell's sound list
  // so the sound slider controls it like every other effect.
