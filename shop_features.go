@@ -112,10 +112,8 @@ func (s *storefront) featureHandler(next http.Handler) http.Handler {
 			s.seasonScript(w, r)
 		case r.URL.Path == "/points":
 			s.freePointsPage(w, r)
-		case r.URL.Path == "/points/card":
-			s.cardEntryPage(w, r)
-		case r.URL.Path == "/points/buy":
-			s.buyPointsPage(w, r)
+		case strings.HasPrefix(r.URL.Path, "/points/"):
+			s.pointsFlow(w, r)
 		case r.URL.Path == "/help" || r.URL.Path == "/activity" || r.URL.Path == "/downloaded" || r.URL.Path == "/settings" || r.URL.Path == "/controllers" || r.URL.Path == "/news" || r.URL.Path == "/oss/serv/W_02.html":
 			s.featureInfo(w, r)
 		case strings.HasPrefix(r.URL.Path, "/wii-install/title/"):

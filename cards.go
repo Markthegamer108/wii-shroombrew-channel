@@ -3,12 +3,16 @@ package main
 // Wii Points cards. The website asks the server to mint a card; the server
 // stores only a keyed hash of the number, so a database leak reveals no usable
 // codes. A card is worth 1000 points, works once, and unused cards expire.
+// Wii Points are free, so any other 16-digit number redeems as a standard
+// 1000-point card too, as on the WiiMart revival; minting stays for the
+// website's card page.
 //
 // Abuse limits (the endpoint is public, so it is a target):
 //   - 15 s cooldown between cards per network address (IPv6 grouped by /64)
 //   - at most 25 unused cards and 300 new cards per day per address
 //   - at most 600 new cards per 10 minutes across the whole service
-//   - redeeming locks out an address or wallet after 8 wrong numbers / 10 min
+//   - redeeming locks out an address or wallet after 8 entries that are not
+//     card numbers / 10 min
 
 import (
 	"context"
@@ -17,6 +21,8 @@ import (
 	"math/big"
 	"strings"
 	"time"
+
+	"github.com/jackc/pgx/v4"
 )
 
 const (
@@ -183,7 +189,20 @@ func recordFail(ctx context.Context, buckets ...string) {
 	}
 }
 
-// redeemCard turns a card number into points, exactly once.
+// cardValue is what a card number is worth: a minted card's points while it
+// is unused, otherwise the standard card (see redeemCard).
+func cardValue(ctx context.Context, num string) int {
+	var points int
+	if pool.QueryRow(ctx, `SELECT points FROM shroombrew_cards WHERE hash=$1 AND redeemed_at IS NULL AND created_at > now() - interval '`+cardTTL+`'`, cardHash(num)).Scan(&points) == nil {
+		return points
+	}
+	return cardPoints
+}
+
+// redeemCard turns a card number into points. A card minted on the website
+// gives its points once. Wii Points are free, so, as on the WiiMart revival,
+// any other 16-digit number is a standard 1000-point card; only input that is
+// not a card number counts toward the lockout.
 func redeemCard(ctx context.Context, wallet, ip, raw string) (int, error) {
 	if isBanned(ctx, ip) {
 		return 0, errBanned
@@ -199,7 +218,7 @@ func redeemCard(ctx context.Context, wallet, ip, raw string) (int, error) {
 		}
 	}
 	num := normalizeCard(raw)
-	if num == "" || !luhnValid(num) {
+	if num == "" {
 		recordFail(ctx, bw, bi)
 		return 0, errCardBad
 	}
@@ -212,18 +231,20 @@ func redeemCard(ctx context.Context, wallet, ip, raw string) (int, error) {
 	if err = tx.QueryRow(ctx, `SELECT points FROM shroombrew_wallets WHERE id=$1 FOR UPDATE`, wallet).Scan(&balance); err != nil {
 		return 0, err
 	}
-	var points int
+	points, ref := cardPoints, "standard"
+	var minted int
 	err = tx.QueryRow(ctx, `UPDATE shroombrew_cards SET redeemed_at=now(), redeemed_by=$2
-	   WHERE hash=$1 AND redeemed_at IS NULL AND created_at > now() - interval '`+cardTTL+`' RETURNING points`, cardHash(num), wallet).Scan(&points)
-	if err != nil {
-		tx.Rollback(ctx)
-		recordFail(ctx, bw, bi)
-		return 0, errCardBad
+	   WHERE hash=$1 AND redeemed_at IS NULL AND created_at > now() - interval '`+cardTTL+`' RETURNING points`, cardHash(num), wallet).Scan(&minted)
+	switch {
+	case err == nil:
+		points, ref = minted, cardHash(num)[:12]
+	case err != pgx.ErrNoRows:
+		return 0, err
 	}
 	if balance+points > walletCap {
-		return 0, errPointsCap // rolled back: the card stays unused
+		return 0, errPointsCap // rolled back: a minted card stays unused
 	}
-	if err = addPoints(ctx, tx, wallet, points, "card", cardHash(num)[:12]); err != nil {
+	if err = addPoints(ctx, tx, wallet, points, "card", ref); err != nil {
 		return 0, err
 	}
 	return points, tx.Commit(ctx)

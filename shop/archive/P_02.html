@@ -54,7 +54,7 @@
 #cardFlash { color:#1b7a1b; }
 #cardFlash.bad { color:#c0392b; }
 input {
-	font-family: "Wii NTLG Gothic JPN Regular";
+	font-family: "Wii NTLG PGothic JPN Regular", "Wii NTLG Gothic JPN Regular", sans-serif;
 	font-size: 24px;
 	background-color: #FFFFFF;
 	letter-spacing: 0.1em;
@@ -162,5 +162,5 @@ input {
 </div>
 </form>
 </div>
-{{if .Flash}}<div id="cardFlash"{{if .FlashBad}} class="bad"{{end}}>{{.Flash}}</div>{{else}}<div id="cardHint" class="contentsBlack">{{index .T "c_go"}}</div>{{end}}
-<script>var archiveShop={{.}};</script><script src="/archive-shop/checkout.js?v=3"></script></body></html>
+{{if .Flash}}<div id="cardFlash"{{if .FlashBad}} class="bad"{{end}}>{{.Flash}}</div>{{end}}
+<script>var archiveShop={{.}};</script><script src="/archive-shop/checkout.js?v=4"></script></body></html>

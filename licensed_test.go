@@ -23,7 +23,8 @@ func TestLicensedCatalogLoad(t *testing.T) {
 			continue
 		}
 		licensed++
-		if a.Price <= 0 {
+		// Channels such as the Internet Channel were free on the shop.
+		if a.Price < 0 || (a.Price == 0 && a.Category != "Channels") {
 			t.Errorf("licensed app %s has price %d", a.Slug, a.Price)
 		}
 		if seen[a.Slug] {
@@ -63,7 +64,8 @@ func TestMergedCatalogLoad(t *testing.T) {
 		}
 	}
 	t.Logf("apps: %d, bySlug: %d, licensed: %d", len(s.apps), len(s.bySlug), lic)
-	if lic < 2600 {
-		t.Errorf("expected ~2694 licensed apps, got %d", lic)
+	// Region releases are collapsed into one entry per game (merge_catalog.py).
+	if lic < 1200 {
+		t.Errorf("expected ~1351 licensed games, got %d", lic)
 	}
 }

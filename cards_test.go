@@ -263,16 +263,8 @@ func TestCardsIntegration(t *testing.T) {
 	if after, _ := walletBalance(wallet); after != before+1000 {
 		t.Fatalf("balance %d want %d", after, before+1000)
 	}
-	if _, err = redeemCard(bg, wallet, rip, formatCard(num)); err != errCardBad {
-		t.Fatalf("reuse must fail: %v", err)
-	}
-	other := randomWalletForTest(t)
-	walletBalance(other)
-	if _, err = redeemCard(bg, other, uniqueIP(t), num); err != errCardBad {
-		t.Fatalf("another wallet must not reuse it: %v", err)
-	}
 	h, _ := ledgerHistory(bg, wallet, 5)
-	if len(h) == 0 || h[0].Delta != 1000 || h[0].Reason != "card" || h[0].Balance != before+1000 {
+	if len(h) == 0 || h[0].Delta != 1000 || h[0].Reason != "card" || h[0].Balance != before+1000 || h[0].Ref != cardHash(num)[:12] {
 		t.Fatalf("ledger entry missing or wrong: %+v", h)
 	}
 
@@ -281,12 +273,29 @@ func TestCardsIntegration(t *testing.T) {
 		t.Fatal("points not persisted")
 	}
 
-	// --- brute force lockout ---
+	// --- a used card, or any other number, is a standard card ---
+	other := randomWalletForTest(t)
+	walletBalance(other)
+	for _, n := range []string{num, "1111 1111 1111 1111"} {
+		got, err = redeemCard(bg, other, uniqueIP(t), n)
+		if err != nil || got != cardPoints {
+			t.Fatalf("standard card %s: %d %v", n, got, err)
+		}
+		if h, _ = ledgerHistory(bg, other, 1); len(h) == 0 || h[0].Ref != "standard" {
+			t.Fatalf("standard card ledger: %+v", h)
+		}
+	}
+	var by string
+	if db.QueryRow(bg, `SELECT redeemed_by FROM shroombrew_cards WHERE hash=$1`, cardHash(num)).Scan(&by); by != wallet {
+		t.Fatalf("the minted card must stay redeemed by its first wallet, got %q", by)
+	}
+
+	// --- brute force lockout: entries that are not card numbers ---
 	lw := randomWalletForTest(t)
 	walletBalance(lw)
 	lip := uniqueIP(t)
 	for i := 0; i < redeemFailLimit; i++ {
-		if _, err = redeemCard(bg, lw, lip, "0000 0000 0000 0000"); err != errCardBad {
+		if _, err = redeemCard(bg, lw, lip, "0000 0000"); err != errCardBad {
 			t.Fatalf("wrong card %d: %v", i, err)
 		}
 	}
@@ -320,11 +329,16 @@ func TestCardsIntegration(t *testing.T) {
 		t.Fatalf("card must stay valid after a cap refusal: %v", err)
 	}
 
-	// --- expired cards are refused ---
+	// --- an expired card is no longer minted: it redeems as a standard card ---
 	old, _ := generateCard(bg, uniqueIP(t))
 	db.Exec(bg, `UPDATE shroombrew_cards SET created_at=now()-interval '31 days' WHERE hash=$1`, cardHash(old))
-	if _, err = redeemCard(bg, other, uniqueIP(t), old); err != errCardBad {
+	ew := randomWalletForTest(t)
+	walletBalance(ew)
+	if _, err = redeemCard(bg, ew, uniqueIP(t), old); err != nil {
 		t.Fatalf("expired card: %v", err)
+	}
+	if h, _ = ledgerHistory(bg, ew, 1); len(h) == 0 || h[0].Ref != "standard" {
+		t.Fatalf("expired card redeemed as minted: %+v", h)
 	}
 }
 

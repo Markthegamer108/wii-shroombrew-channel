@@ -35,6 +35,13 @@ type archivedCheckoutData struct {
 	FlashBad  bool
 	// Card is the Wii Points card artwork for the console's region.
 	Card string
+	// Add Wii Points screens (points_flow.go): the amount being added or on
+	// the card, P_06's buttons and balance limit, the made-up card P_08 shows
+	// (CardNumber is the entered number on P_04), and P_15's new balance.
+	Points, NewBalance, Cap                         int
+	Options                                         []pointsOption
+	CardNumber, CardType, CardExpMonth, CardExpYear string
+	CardCode                                        string
 }
 
 // Only return to a known local title checkout after adding free points.

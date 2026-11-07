@@ -120,6 +120,8 @@ type classicTitle struct {
 	Link            string   `json:"link"`
 	Thumbnail       string   `json:"thumbnail"`
 	Description     string   `json:"description"`
+	// IsNew puts the shop's golden NEW badge on the title's welcome tile.
+	IsNew bool `json:"isNew,omitempty"`
 }
 
 func classicTitleID(slug string) string {
@@ -143,10 +145,11 @@ func classicPrice(slug string) int {
 	return (int(sum[0])%5 + 1) * 100
 }
 
-// classicPriceFor returns the authentic licensed price when the catalog sets
-// one, 0 for Flash titles (free), and the derived price otherwise.
+// classicPriceFor returns the authentic licensed price (0 for the free
+// channels, as the real shop sold them), 0 for Flash titles (free), and the
+// derived price otherwise.
 func classicPriceFor(app catalogApp) int {
-	if app.Price > 0 {
+	if app.Price > 0 || app.Licensed {
 		return app.Price
 	}
 	if app.Flash {
@@ -318,42 +321,48 @@ func (s *storefront) regionApp(app catalogApp, r *http.Request) catalogApp {
 	return out
 }
 
+// classicTitleFor is one catalog entry in the shape the shop pages' gameslist
+// uses.
+func classicTitleFor(app catalogApp) classicTitle {
+	category := app.Category
+	if category == "" {
+		category = "Homebrew"
+	}
+	releaseDate := ""
+	if app.ReleaseDate > 0 {
+		releaseDate = time.Unix(app.ReleaseDate, 0).UTC().Format("Jan 2, 2006")
+	}
+	size := app.FileSize.ZipUncompressed
+	if app.Size > 0 {
+		size = app.Size
+	}
+	if size == 0 {
+		size = app.Shop.ContentsSize
+	}
+	// The catalog carries the real Wii Shop platform/rating when known;
+	// fall back to the broad shop section otherwise. Genre stays the
+	// section (Virtual Console/WiiWare/...) so the catalog groups by the
+	// real shop's sections, sorted alphabetically within each.
+	console := consoleLabel(category)
+	if app.Platform != "" {
+		console = app.Platform
+	}
+	return classicTitle{
+		ID: classicTitleIDForApp(app), Title1: app.Name, Title2: app.Subtitle, Console: console,
+		Region: "US", Language: "EN", Publisher: app.Author, Genre: category,
+		Date: releaseDate, ReleaseUnix: app.ReleaseDate, Added: releaseDate, Points: strconv.Itoa(classicPriceFor(app)), Players: app.Players, Attributes: "",
+		Controllers: controllerText(app), ControllerIcons: controllerIcons(app), ControllerExtra: controllerExtra(app), DisplayGenre: app.Genre,
+		Rating: app.Rating, RatingDetails: app.RatingDetails, Size: size,
+		Link:      "/download/" + app.Slug,
+		Thumbnail: "/icons/" + app.Slug + ".png", Description: app.Description.Short,
+	}
+}
+
 func (s *storefront) classicTitles() []classicTitle {
 	titles := make([]classicTitle, 0, len(s.apps)+1)
 	titles = append(titles, classicTitle{}) // The imported catalog UI begins at index one.
 	for _, app := range s.apps {
-		category := app.Category
-		if category == "" {
-			category = "Homebrew"
-		}
-		releaseDate := ""
-		if app.ReleaseDate > 0 {
-			releaseDate = time.Unix(app.ReleaseDate, 0).UTC().Format("Jan 2, 2006")
-		}
-		size := app.FileSize.ZipUncompressed
-		if app.Size > 0 {
-			size = app.Size
-		}
-		if size == 0 {
-			size = app.Shop.ContentsSize
-		}
-		// The catalog carries the real Wii Shop platform/rating when known;
-		// fall back to the broad shop section otherwise. Genre stays the
-		// section (Virtual Console/WiiWare/...) so the catalog groups by the
-		// real shop's sections, sorted alphabetically within each.
-		console := consoleLabel(category)
-		if app.Platform != "" {
-			console = app.Platform
-		}
-		titles = append(titles, classicTitle{
-			ID: classicTitleIDForApp(app), Title1: app.Name, Console: console,
-			Region: "US", Language: "EN", Publisher: app.Author, Genre: category,
-			Date: releaseDate, ReleaseUnix: app.ReleaseDate, Added: releaseDate, Points: strconv.Itoa(classicPriceFor(app)), Players: app.Players, Attributes: "",
-			Controllers: controllerText(app), ControllerIcons: controllerIcons(app), ControllerExtra: controllerExtra(app), DisplayGenre: app.Genre,
-			Rating: app.Rating, RatingDetails: app.RatingDetails, Size: size,
-			Link:      "/download/" + app.Slug,
-			Thumbnail: "/icons/" + app.Slug + ".png", Description: app.Description.Short,
-		})
+		titles = append(titles, classicTitleFor(app))
 	}
 	// The shop catalog is grouped by section (category) and alphabetical
 	// within each section, matching the real Wii Shop ordering.
@@ -372,50 +381,17 @@ func (s *storefront) classicGamesJS() []byte {
 	return append([]byte("// Generated from Shroombrew's homebrew catalog.\nvar gameslist = "), append(b, ';')...)
 }
 
-// The welcome page only displays twenty titles. Keeping this script small
-// avoids making Wii Opera parse the full catalog before it can paint the
-// recommendation tiles. The catalog page still receives classicGamesJS.
-func (s *storefront) classicFeaturedGamesJS() []byte {
-	titles := s.classicTitles()
-	if len(titles) > 21 {
-		titles = titles[:21]
-	}
-	b, _ := json.Marshal(titles)
-	return append([]byte("// Generated featured Shroombrew titles.\nvar gameslist = "), append(b, ';')...)
-}
-
-func (s *storefront) classicHomeJS() []byte {
-	titles := s.classicTitles()[1:]
-	ids := make([]string, 0, 20)
-	for _, title := range titles {
-		ids = append(ids, title.ID)
-		if len(ids) == 20 {
-			break
-		}
-	}
-	if len(ids) == 0 {
-		ids = []string{"0000000000000000"}
-	}
-	seedCount := len(ids)
-	data := [][]string{
-		{"Welcome to Shroombrew!", "Browse homebrew for your Wii.", "Homebrew for everyone.", "Download apps as Wii Menu channels."},
-		{"Featured Homebrew", "New Homebrew", "Games", "Utilities"},
-	}
-	for len(ids) < 20 {
-		ids = append(ids, ids[len(ids)%seedCount])
-	}
-	for i := 0; i < 5; i++ {
-		data = append(data, ids[i*4:(i+1)*4])
-	}
-	b, _ := json.Marshal(data)
-	return append([]byte("// Generated from Shroombrew's homebrew catalog.\nvar homedata = "), append(b, ';')...)
-}
-
 func classicWelcomeFallbackJS() []byte {
 	return []byte(`(function(){
-var page=0;var fillRetries=0;
+var page=0;var fillRetries=0;var timer=null;
+// The shop steps to the next list on its own every few seconds
+// (SCROLL_COUNT 36 x 160ms); an arrow press starts the wait again.
+var STEP=6000;
+var lists=5;
+function isNew(id){if(typeof homeNew=='undefined')return false;for(var i=0;i<homeNew.length;i++)if(homeNew[i]==id)return true;return false;}
+function display(id,on){var n=document.getElementById(id);if(n)n.style.display=on?'':'none';}
 function tile(title,position){
- if(!title)return;
+ if(!title){display('rec0'+position,false);display('new0'+position,false);return;}
  var imageBox=document.getElementById('soft0'+position);
  if(imageBox&&title.thumbnail){
   imageBox.innerHTML='';
@@ -438,29 +414,31 @@ function tile(title,position){
  }
  var link=document.getElementById('titleUrl0'+position);
  if(link&&title.id){link.href="javascript:showPage('B_05.html?p=4&titleId="+title.id+"')";}
- if(typeof showElement!='undefined')showElement('rec0'+position);
+ display('rec0'+position,true);
+ // The golden NEW badge, as the shop's showRecommendedTitle draws it.
+ display('new0'+position,isNew(title.id));
 }
-
 function fill(){
  if(typeof games=='undefined'||!games||!games.length){if(fillRetries++<20)setTimeout(fill,250);return;}
  for(var i=0;i<4;i++)tile(games[page*4+i],i+1);
  var heading=document.getElementById('txtSoftList');
- if(heading){var labels=['Recommended Titles','Featured Homebrew','New Homebrew','Games','Utilities'];
+ if(heading){
   if(page==0)heading.innerHTML='<span class="style1">Wii Shop Channel</span><span class="style2">Recommended Titles</span>';
-  else heading.innerHTML='<nobr><span class="style1">'+labels[page]+'</span></nobr>';
+  else{var label=(typeof homedata!='undefined'&&homedata[1]&&homedata[1][page-1])||'';heading.innerHTML='<nobr><span class="style1">'+label+'</span></nobr>';}
  }
 }
+function schedule(){if(timer)clearTimeout(timer);timer=setTimeout(function(){page=(page+1)%lists;fill();schedule();},STEP);}
 window.add_scroll_counter=function(){};
 // start_animation_arrow is left to the page: the arrows bob as on the shop.
-window.change_up_RecommendedTitles=function(){page=(page+1)%5;fill();};
-window.change_down_RecommendedTitles=function(){page=(page+4)%5;fill();};
+window.change_up_RecommendedTitles=function(){page=(page+1)%lists;fill();schedule();};
+window.change_down_RecommendedTitles=function(){page=(page+lists-1)%lists;fill();schedule();};
 function arrows(){
  // Keep the page's own arrow positions (top 118px, stopped frames at 108px);
- // only wire the clicks to the homebrew pages.
+ // only wire the clicks to the lists.
  var ids=[['posLeftArrowID',change_down_RecommendedTitles],['posStopLeftArrowID',change_down_RecommendedTitles],['posRightArrowID',change_up_RecommendedTitles],['posStopRightArrowID',change_up_RecommendedTitles]];
  for(var i=0;i<ids.length;i++){
   var node=document.getElementById(ids[i][0]);if(!node)continue;
-  node.style.cursor='pointer';node.onclick=(function(go){return function(){go();return false;};})(ids[i][1]);
+  node.style.cursor='pointer';node.onclick=(function(go){return function(){try{if(typeof snd!='undefined')snd.playSE(cSE_Decide);}catch(e){}go();return false;};})(ids[i][1]);
  }
 }
 function directShopHome(){
@@ -475,7 +453,7 @@ function directShopHome(){
  };
 }
 // W_01 has no rules of dots; the shop and its revivals draw none on this page.
-if(window.setTimeout)setTimeout(function(){fill();arrows();},900);else{fill();arrows();}
+if(window.setTimeout)setTimeout(function(){fill();arrows();schedule();},900);else{fill();arrows();}
 if(window.setTimeout)setTimeout(directShopHome,100);else directShopHome();
 })();`)
 }
@@ -747,12 +725,8 @@ func (s *storefront) classicSiteHandler(soap http.Handler) http.Handler {
 			s.freePointsPage(w, r)
 			return
 		}
-		if r.URL.Path == "/points/card" {
-			s.cardEntryPage(w, r)
-			return
-		}
-		if r.URL.Path == "/points/buy" {
-			s.buyPointsPage(w, r)
+		if strings.HasPrefix(r.URL.Path, "/points/") {
+			s.pointsFlow(w, r)
 			return
 		}
 		if r.URL.Path == "/shroombrew-balance.js" {
@@ -824,11 +798,11 @@ func (s *storefront) classicSiteHandler(soap http.Handler) http.Handler {
 			return
 		case "/games.js":
 			w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
-			w.Write(s.classicFeaturedGamesJS())
+			w.Write(s.classicFeaturedGamesJS(r))
 			return
 		case "/oss/serv/home.js", "/home.js":
 			w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
-			w.Write(s.classicHomeJS())
+			w.Write(s.classicHomeJS(r))
 			return
 		case "/oss/common/js/sound.js", "/oss/oss/common/js/sound.js":
 			w.Header().Set("Content-Type", "text/javascript; charset=utf-8")

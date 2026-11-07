@@ -1,0 +1,25 @@
+{{template "chromeTop" .}}<style type="text/css">
+  /* P_12:  Usage Agreement */
+#text01-01 {position:absolute;left:29px;top:28px;width:442px;height:28px;z-index:36;}
+#P_12-text02-01 {position:absolute;left:34px;top:94px;width:542px;height:81px;z-index:28;}
+#pointFrame01 {position:absolute;left:86px;top:180px;width:439px;height:178px;z-index:35;}
+#top01 {position:absolute;left:64px;top:12px;width:130px;height:28px;z-index:36}
+#top02 {position:absolute;left:142px;top:0px;width:78px;height:100%;z-index:36}
+#top03 {position:absolute;left:87px;top:0px;width:90px;height:100%;z-index:36}
+#down01L {position:absolute;left:26px;top:56px;width:211px;height:28px;z-index:36}
+#down01R {position:absolute;left:218px;top:0px;width:170px;height:100%;z-index:36}
+#down02L {position:absolute;left:26px;top:82px;width:211px;height:28px;z-index:36}
+#down02R {position:absolute;left:218px;top:0px;width:170px;height:100%;z-index:36}
+#down03L {position:absolute;left:26px;top:114px;width:211px;height:28px;z-index:36}
+#down03R {position:absolute;left:218px;top:0px;width:170px;height:100%;z-index:36}
+</style>{{template "chromeBody" .}}<div id="text01-01" class="titleBlackM">Wii Points Purchase Confirmation</div>
+<div id="P_12-text02-01" class="catalogTitleBlack_02">Wii Points have no monetary value and cannot be redeemed for cash. All Wii Points and software downloads are only for use on a single Wii console and are non-refundable and non-transferable.</div>
+<div id="pointFrame01">
+  <img src="/archive-shop/assets/images/banner/point_frame02.gif" width="100%" height="100%" />
+  <div id="top01" class="buttonTextBlackM">Wii Points<div id="top02" align="right"><span class="buttonTextBlackM">{{.Points}}</span><div id="top03" class="buttonTextBlackM">Wii Points</div></div></div>
+  <div id="down01L"><div align="center" class="contentsBlueM">Amount:</div><div id="down01R" align="center"><span class="contentsBlueM">$0.00</span></div></div>
+  <div id="down02L"><div align="center" class="contentsBlueM">Tax:</div><div id="down02R" align="center"><span class="contentsBlueM">$0.00</span></div></div>
+  <div id="down03L"><div align="center" class="warningRed">Total:</div><div id="down03R" align="center"><span class="warningRed">$0.00</span></div></div>
+</div>
+<form id="archiveForm" action="{{.Action}}" method="post"><input type="hidden" name="csrf" value="{{.CSRF}}"><input type="hidden" name="points" value="{{.Points}}"></form>
+<script>var archiveShop={{.}};</script><script src="/archive-shop/checkout.js?v=4"></script></body></html>

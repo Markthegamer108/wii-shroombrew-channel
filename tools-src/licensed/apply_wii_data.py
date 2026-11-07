@@ -74,6 +74,23 @@ def clean_name(nm):
     nm = re.sub(r"<[^>]+>", "", nm)
     return re.sub(r"\s+", " ", nm).strip()
 
+# Virtual Console title IDs name the console in their game code's first
+# letter (00010001 46 41 47 45 = "FAGE", F = NES). Titles with no English
+# listing (mostly Japan-only) get their platform from it.
+VC_SYSTEMS = {"F": "NES", "J": "Super NES", "N": "Nintendo 64", "M": "Sega Genesis",
+              "L": "Master System", "P": "TurboGrafx-16", "Q": "TurboGrafx-16",
+              "C": "Commodore 64", "X": "MSX"}
+
+def vc_platform(title_id):
+    try:
+        code = bytes.fromhex(title_id[8:16]).decode("ascii")
+    except ValueError:
+        return ""
+    if code[:1] == "E":
+        # E + digit is an arcade board, E + letter a Neo Geo game.
+        return "Virtual Console Arcade" if code[1:2].isdigit() else "Neo Geo"
+    return VC_SYSTEMS.get(code[:1], "")
+
 def html_text(s):
     s = re.sub(r"<br\s*/?>", " ", s or "", flags=re.I)
     s = html.unescape(re.sub(r"<[^>]+>", "", s))
@@ -215,6 +232,11 @@ def main():
             if nm:
                 entry["name"] = clean_name(nm)
                 changed_name += 1
+            # The shop's second title line ("Ocarina of Time" under "The
+            # Legend of Zelda:"), shown as the row's second line.
+            sub = clean_name(wm.get("title2", "") or "")
+            if sub:
+                entry["subtitle"] = sub
             pub = wm.get("publisher", "").strip()
             if pub:
                 entry["author"] = pub
@@ -269,6 +291,10 @@ def main():
                 size = 0
             if size > 0:
                 entry["size"] = size
+        if entry.get("category") == "Virtual Console" and not entry.get("platform") and len(tid) == 16:
+            platform = vc_platform(tid)
+            if platform:
+                entry["platform"] = platform
         out.append(entry)
 
     print(f"changed: name {changed_name} price {changed_price} pub {changed_pub} date {changed_date} desc {changed_desc} controllers {changed_ctrl}", file=sys.stderr)

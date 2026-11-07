@@ -65,6 +65,45 @@
    try{num.focus();}catch(e){}
   }
  }
+ // Add Wii Points screens after P_02 (points_flow.go).
+ function picks(fn){var all=document.getElementsByTagName('img');for(var i=0;i<all.length;i++){if((' '+all[i].className+' ').indexOf(' pick ')!==-1)(function(n){n.onclick=function(){fn(n);return false;};})(all[i]);}}
+ function swap(trigger,image,a,b){var t=el(trigger),i=el(image);if(!t||!i)return;t.onmouseover=function(){i.src='/archive-shop/assets/images/banner/'+b;sound(true);};t.onmouseout=function(){i.src='/archive-shop/assets/images/banner/'+a;};}
+ if(d.Page==='P_04'){
+  button('L',L('Do Not Redeem'),function(){go(d.Back);});
+  button('R',L('Redeem'),submit);
+ }
+ if(d.Page==='P_06'){
+  picks(function(n){go(d.Next+'&points='+n.getAttribute('data-points'));});
+  for(var oi=0;oi<4;oi++)swap('point0'+oi+'Pick','point0'+oi+'Img','add_points_a.gif','add_points_b.gif');
+ }
+ if(d.Page==='P_07'){
+  picks(function(n){go(d.Next+'&card='+n.getAttribute('data-card'));});
+  swap('card02Spacer','card02Img','card02_a.gif','card02_b.gif');swap('card03Spacer','card03Img','card03_a.gif','card03_b.gif');
+ }
+ if(d.Page==='P_08'){
+  var panel='';
+  var openPanel=function(id){panel=id;show(id,true);show('underButtonR',false);sound(false);};
+  button('L',L('Back'),function(){if(panel){show(panel,false);panel='';show('underButtonR',true);return;}go(d.Back);});
+  button('R','OK',function(){go(d.Next);});
+  // The expiry date steps like the shop's arrows; nothing here is ever charged.
+  var step=function(id,delta,lo,hi){var f=el(id);if(!f)return;var v=parseInt(f.value,10)+delta;if(v<lo)v=hi;if(v>hi)v=lo;f.value=String(v);sound(false);};
+  var year=new Date().getFullYear();
+  bind('expMonthUp',function(){step('cardExpMM',1,1,12);});bind('expMonthDown',function(){step('cardExpMM',-1,1,12);});
+  bind('expYearUp',function(){step('cardExpYY',1,year,year+10);});bind('expYearDown',function(){step('cardExpYY',-1,year,year+10);});
+  swap('expMonthUp','expMonthUp','arrowUp_a.gif','arrowUp_b.gif');swap('expMonthDown','expMonthDown','arrowDw_a.gif','arrowDw_b.gif');
+  swap('expYearUp','expYearUp','arrowUp_a.gif','arrowUp_b.gif');swap('expYearDown','expYearDown','arrowDw_a.gif','arrowDw_b.gif');
+  bind('securityCodeButton',function(){openPanel('secExplain');});bind('securityStatementButton',function(){openPanel('secStatement');});
+  swap('securityCodeButton','secExplainImg','option_a.gif','option_b.gif');swap('securityStatementButton','statementImg','option_a.gif','option_b.gif');
+ }
+ if(d.Page==='P_12'){
+  button('L',L('Yes'),submit);
+  button('R',L('No'),function(){go(d.Back);});
+ }
+ if(d.Page==='P_15'){
+  show('underButtonL',false);
+  try{snd.playSE(cSE_AddPoint);}catch(e){}
+  button('','OK',function(){go(d.Back);});
+ }
  if(d.Flash){try{snd.playSE(d.FlashBad?cSE_Error:cSE_AddPoint);}catch(e){}}
  if(d.Page==='B_10'){
   show('details',false);show('text05-01',false);

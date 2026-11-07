@@ -25,6 +25,9 @@ var shopFiles embed.FS
 type catalogApp struct {
 	Slug        string `json:"slug"`
 	Name        string `json:"name"`
+	// Subtitle is the shop's second title line ("Ocarina of Time" under
+	// "The Legend of Zelda:", "Demo" under a WiiWare game's trial).
+	Subtitle    string `json:"subtitle,omitempty"`
 	Author      string `json:"author"`
 	Category    string `json:"category"`
 	Version     string `json:"version"`

@@ -85,8 +85,13 @@ func TestBansAndAdminIntegration(t *testing.T) {
 	if err := adminRun(bg, []string{"card-revoke", formatCard(num)}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := redeemCard(bg, w, uniqueIP(t), num); err != errCardBad {
-		t.Fatalf("revoked card still works: %v", err)
+	// A revoked number is no longer a minted card; like any number it now
+	// redeems as a standard card.
+	if _, err := redeemCard(bg, w, uniqueIP(t), num); err != nil {
+		t.Fatalf("revoked number as a standard card: %v", err)
+	}
+	if h, _ := ledgerHistory(bg, w, 1); len(h) == 0 || h[0].Ref != "standard" {
+		t.Fatalf("revoked card still redeemed as minted: %+v", h)
 	}
 	used, _ := generateCard(bg, uniqueIP(t))
 	if _, err := redeemCard(bg, w, uniqueIP(t), used); err != nil {

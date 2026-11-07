@@ -25,11 +25,16 @@ func isWiiShopUA(r *http.Request) bool {
 	return strings.Contains(r.UserAgent(), "Wii Shop Channel/")
 }
 
-// pointCardImage is the retail card artwork shown on the Add Wii Points page.
-// The shop showed the 2,000-point Wii Points Card; we show the 1,000-point
-// Nintendo Points Card, which is the card Shroombrew hands out.
-func pointCardImage(lang string) string {
-	return "pointcard_pic_1000.gif"
+// pointCardImage is the retail Wii Points Card the Add Wii Points page shows:
+// the console region's card, as the shop picked it (P_01_getRegionPic).
+func pointCardImage(r *http.Request) string {
+	switch regionFor(r) {
+	case "EU":
+		return "pointcard_pic_EU.gif"
+	case "JP", "KR":
+		return "pointcard_pic_JP.gif"
+	}
+	return "pointcard_pic_US.gif"
 }
 
 // ---- points: add points, then redeem a card number ---------------------------
@@ -78,26 +83,13 @@ func (s *storefront) freePointsPage(w http.ResponseWriter, r *http.Request) {
 	writeArchivedCheckout(w, r, archivedCheckoutData{
 		Page: "P_01", Balance: points, Back: archivedPointsReturn(r),
 		T:    tmap(lang, "c_title", "c_sub", "c_text", "c_text2", "c_redeem_a", "c_redeem_b", "c_continue_a", "c_continue_b"),
-		Site: publicSite(), Card: pointCardImage(lang),
+		Site: publicSite(), Card: pointCardImage(r),
 	})
 }
 
-// buyPointsPage explains why the credit card button does not take a card.
-func (s *storefront) buyPointsPage(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Redirect(w, r, "/points/buy", http.StatusSeeOther)
-		return
-	}
-	lang := langFor(r)
-	writeArchivedCheckout(w, r, archivedCheckoutData{
-		Page: "P_06", Back: archivedPointsReturn(r),
-		T:    tmap(lang, "c_buy_title", "c_buy_text", "c_buy_text2"),
-		Site: publicSite(),
-	})
-}
-
-// cardEntryPage is the prepaid card screen: one activation number field, the
-// same place the shop asked for it, and the same single-use wallet flow.
+// cardEntryPage is the prepaid card screen (P_02): one activation number
+// field, where the shop asked for it. OK shows what the card is worth (P_04)
+// before anything is redeemed.
 func (s *storefront) cardEntryPage(w http.ResponseWriter, r *http.Request) {
 	id, err := walletID(w, r)
 	if err != nil {
@@ -112,19 +104,20 @@ func (s *storefront) cardEntryPage(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Reload the page and try again", 403)
 			return
 		}
-		_, rerr := redeemCard(r.Context(), id, clientIP(r), r.Form.Get("card"))
-		m := "&m=ok"
-		if rerr != nil {
-			m = "&m=err"
-			if we, ok := rerr.(*waitError); ok {
-				m = "&m=locked&n=" + strconv.Itoa(we.seconds())
-			} else if rerr == errPointsCap {
-				m = "&m=cap"
-			} else if rerr != errCardBad {
-				m = "&m=fail"
-			}
+		num := normalizeCard(r.Form.Get("card"))
+		if num == "" {
+			http.Redirect(w, r, self+"&m=err", http.StatusSeeOther)
+			return
 		}
-		http.Redirect(w, r, self+m, http.StatusSeeOther)
+		points, err := walletBalance(id)
+		if err != nil {
+			http.Error(w, "Wallet unavailable", 500)
+			return
+		}
+		writeArchivedCheckout(w, r, archivedCheckoutData{
+			Page: "P_04", Balance: points, Points: cardValue(r.Context(), num), CardNumber: formatCard(num),
+			CSRF: csrfToken(id), Action: "/points/card/redeem?" + returnQuery(back), Back: self,
+		})
 		return
 	}
 	if r.Method != http.MethodGet {
@@ -141,7 +134,7 @@ func (s *storefront) cardEntryPage(w http.ResponseWriter, r *http.Request) {
 	writeArchivedCheckout(w, r, archivedCheckoutData{
 		Page: "P_02", Balance: points, CSRF: csrfToken(id), Action: self, Back: back,
 		T:    tmap(lang, "c_r_title", "c_r_text", "c_r_label", "c_go"),
-		Site: publicSite(), Flash: flash, FlashBad: bad, Card: pointCardImage(lang),
+		Site: publicSite(), Flash: flash, FlashBad: bad, Card: pointCardImage(r),
 	})
 }
 

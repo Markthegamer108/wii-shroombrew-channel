@@ -1,0 +1,79 @@
+{{template "chromeTop" .}}<style type="text/css">
+  /* P_08:  Credit Card Input */
+#text01-01 {position:absolute;left:29px;top:28px;width:442px;height:28px;z-index:38;}
+#P_08-text02-01 {position:absolute;left:110px;top:86px;width:420px;height:35px;z-index:27;}
+#cardicon {position:absolute;left:34px;top:88px;width:62px;height:58px;z-index:64;}
+#disclaimer {position:absolute;left:190px;top:117px;text-align:center;}
+#creditCardNumber {position:absolute;top:153px;height:30px;}
+#creditCard_Field {position:absolute;left:304px;width:200px;height:100%;z-index:22;}
+#creditCard_word, #expirationDate_word {position:absolute;text-align:center;left:50px;top:7px;width:210px;z-index:22;}
+#expirationDate {position:absolute;top:235px;}
+#expirationMonth {position:absolute;left:330px;z-index:30;}
+#expirationYear {position:absolute;left:460px;z-index:30;}
+.arrowUp {position:absolute;top:-40px;width:64px;height:38px;z-index:32;cursor:pointer;}
+.arrowUpShadow {position:absolute;left:-13px;top:-48px;width:90px;height:57px;z-index:31;}
+.arrowDown {position:absolute;top:33px;width:64px;height:38px;z-index:32;cursor:pointer;}
+.arrowDownShadow {position:absolute;left:-13px;top:25px;width:90px;height:57px;z-index:31;}
+#expirationFieldMM, #expirationFieldYY {position:absolute;width:64px;z-index:34;}
+#expirationFieldMM input, #expirationFieldYY input {width:60px;padding:0;}
+#securityCode {position:absolute;top:300px;height:40px;}
+#securityCode_Field {position:absolute;left:304px;top:24px;width:80px;height:18px;z-index:31;}
+#securityCode_word {position:absolute;text-align:center;left:50px;top:4px;width:210px;height:18px;z-index:32;}
+#securityCodeButton {position:absolute;left:30px;top:328px;width:255px;height:40px;z-index:35;cursor:pointer;}
+#securityStatementButton {position:absolute;left:410px;top:321px;width:180px;height:47px;z-index:35;cursor:pointer;}
+.optBanner {position:absolute;left:0;top:0;z-index:35;}
+.optWord {position:absolute;left:0;top:0;text-align:center;z-index:36;}
+.inputTypeA {font-size:18px;background-color:#FFFFFF;text-align:left;padding-left:10px;letter-spacing:0.1em;}
+.inputTypeC {font-size:18px;background-color:#FFFFFF;text-align:center;letter-spacing:0.1em;}
+#secExplain, #secStatement {position:absolute;left:0;top:0;width:608px;height:360px;background:#fff;z-index:90;}
+#P_09-text02-01 {position:absolute;left:33px;top:80px;width:542px;height:16px;}
+#P_09-text03-01 {position:absolute;left:240px;top:110px;width:330px;height:220px;}
+#P_09-cardImg {position:absolute;left:48px;top:137px;width:190px;height:115px;}
+#P_16-text02-01 {position:absolute;left:29px;top:77px;width:545px;height:18px;}
+#P_16-text03-01 {position:absolute;left:39px;top:113px;width:525px;height:246px;}
+.panelTitle {position:absolute;left:29px;top:28px;width:442px;height:28px;}
+</style>{{template "chromeBody" .}}<div id="text01-01" class="titleBlackL">Wii Points Purchase</div>
+<img id="cardicon" src="/archive-shop/assets/images/banner/{{if eq .CardType "M"}}card02{{else}}card03{{end}}_icon.gif" width="62" height="58" />
+<div id="P_08-text02-01" class="catalogTitleBlack_02">Please enter your credit-card information.</div>
+<b id="disclaimer">Wii Points don't cost money.</b>
+<div id="creditCardNumber">
+  <div id="creditCard_word" class="contentsBlackM bold">Credit-Card Number</div>
+  <div id="creditCard_Field"><input type="text" class="inputTypeA inputStyle" id="cardNumber" value="{{.CardNumber}}" size="24" readonly="readonly"/></div>
+</div>
+<div id="expirationDate">
+  <div id="expirationDate_word" class="contentsBlackM bold">Expiration Date</div>
+  <div id="expirationMonth"><center>
+    <img src="/archive-shop/assets/images/banner/arrowUp_a.gif" class="arrowUp" id="expMonthUp"/><img src="/archive-shop/assets/images/banner/top_help_shadow02.gif" class="arrowUpShadow"/>
+    <img src="/archive-shop/assets/images/banner/arrowDw_a.gif" class="arrowDown" id="expMonthDown"/><img src="/archive-shop/assets/images/banner/top_help_shadow02.gif" class="arrowDownShadow"/>
+    <div id="expirationFieldMM"><input type="text" class="inputTypeC inputStyle" id="cardExpMM" value="{{.CardExpMonth}}" size="2" readonly="readonly"></div>
+  </center></div>
+  <div id="expirationYear"><center>
+    <img src="/archive-shop/assets/images/banner/arrowUp_a.gif" class="arrowUp" id="expYearUp"/><img src="/archive-shop/assets/images/banner/top_help_shadow02.gif" class="arrowUpShadow"/>
+    <img src="/archive-shop/assets/images/banner/arrowDw_a.gif" class="arrowDown" id="expYearDown"/><img src="/archive-shop/assets/images/banner/top_help_shadow02.gif" class="arrowDownShadow"/>
+    <div id="expirationFieldYY"><input type="text" class="inputTypeC inputStyle" id="cardExpYY" value="{{.CardExpYear}}" size="4" readonly="readonly"></div>
+  </center></div>
+</div>
+<div id="securityCode">
+  <div id="securityCode_Field"><input type="text" class="inputTypeA inputStyle" id="cardVfyVal" value="{{.CardCode}}" size="4" readonly="readonly"/></div>
+  <div id="securityCode_word"><div class="contentsBlackM bold">Security Code</div></div>
+</div>
+<div id="securityCodeButton">
+  <img class="optBanner" src="/archive-shop/assets/images/banner/option_a.gif" width="255" height="40" id="secExplainImg"/>
+  <div class="optWord contentsBlack" style="width:255px;height:40px"><table height="100%" width="100%"><tr><td valign="middle" align="center">What&rsquo;s a security code?</td></tr></table></div>
+</div>
+<div id="securityStatementButton">
+  <img class="optBanner" src="/archive-shop/assets/images/banner/option_a.gif" width="180" height="47" id="statementImg"/>
+  <div class="optWord contentsBlack" style="width:180px;height:47px"><table height="100%" width="100%"><tr><td valign="middle" align="center">Security Statement</td></tr></table></div>
+</div>
+<div id="secExplain" style="display:none">
+  <div class="panelTitle titleBlackL">Credit-Card Purchase</div>
+  <div id="P_09-text02-01" align="center"><span class="headerBlueL">What&rsquo;s a security code?</span></div>
+  <div id="P_09-text03-01" class="contentsBlack"><p>Credit-card companies provide a special three-digit number that is printed on the back of your credit card. This is provided as an extra security measure to help detect fraudulent use of your credit-card account.<BR><BR>Wii Points are free here, so this one is made up and nothing is ever charged.</p></div>
+  <img id="P_09-cardImg" src="/archive-shop/assets/images/banner/credit_back01.gif" width="190" height="115"/>
+</div>
+<div id="secStatement" style="display:none">
+  <div class="panelTitle titleBlackL">Credit-Card Purchase</div>
+  <div id="P_16-text02-01"><div align="left" class="headerBlueM">Credit-Card Security Statement</div></div>
+  <div class="catalogTitleBlack_01" id="P_16-text03-01">Shroombrew never asks for, stores or sends a real credit card. Wii Points are free: the card on this screen is made up, every amount costs $0.00, and choosing OK only adds the points to your account.</div>
+</div>
+<script>var archiveShop={{.}};</script><script src="/archive-shop/checkout.js?v=4"></script></body></html>

@@ -103,7 +103,7 @@ func (s *storefront) nativeV2Handler(next http.Handler) http.Handler {
 			return
 		case "/native-v2/home.js", "/oss/serv/home.js":
 			w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
-			w.Write(s.classicHomeJS())
+			w.Write(s.classicHomeJS(r))
 			return
 		case "/native-v2/sound.js", "/oss/oss/common/js/sound.js":
 			w.Header().Set("Content-Type", "application/javascript; charset=utf-8")

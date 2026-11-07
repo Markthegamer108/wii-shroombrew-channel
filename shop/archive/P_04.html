@@ -1,0 +1,18 @@
+{{template "chromeTop" .}}<style type="text/css">
+  /* P_04/P_05:  Redeem Confirmation */
+#text01-01 {position:absolute;left:29px;top:28px;width:442px;height:28px;z-index:28;}
+#topFrame {position:absolute;left:59px;top:112px;width:490px;height:121px;z-index:20;}
+#P_05-text02-01 {position:absolute;left:0px;top:14px;width:100%;height:40px;z-index:21;}
+#P_05-text02-02 {position:absolute;left:0px;top:71px;width:100%;height:40px;z-index:21;}
+#P_05-text03-01 {position:absolute;left:48px;top:290px;width:514px;height:18px;z-index:21;}
+</style>{{template "chromeBody" .}}<div class="titleBlackM" id="text01-01">Redeem Wii Points Card</div>
+<div id="redeemConfirm">
+  <div id="topFrame" align="center">
+    <img src="/archive-shop/assets/images/banner/point_frame01.gif" width="100%" height="100%" />
+    <div id="P_05-text02-01" class="headerBlueL" align="center">Wii Points on this card</div>
+    <div id="P_05-text02-02" class="titleBlackL" align="center">{{.Points}} Wii Points</div>
+  </div>
+  <div id="P_05-text03-01" class="headerBlueM_01" align="center">Do you want to redeem this Wii Points Card?</div>
+</div>
+<form id="archiveForm" action="{{.Action}}" method="post"><input type="hidden" name="csrf" value="{{.CSRF}}"><input type="hidden" name="card" value="{{.CardNumber}}"></form>
+<script>var archiveShop={{.}};</script><script src="/archive-shop/checkout.js?v=4"></script></body></html>
