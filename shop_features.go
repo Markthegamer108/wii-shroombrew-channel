@@ -75,6 +75,11 @@ func (s *storefront) featureHandler(next http.Handler) http.Handler {
 			http.Redirect(w, r, "/community/index.html", http.StatusFound)
 		case r.URL.Path == "/community":
 			http.Redirect(w, r, "/community/", http.StatusFound)
+		case r.URL.Path == "/community/":
+			// Serve the community single-page site directly (index.html with hash routing)
+			localPath := filepath.Join(nathanSiteRoot, "community", "index.html")
+			http.ServeFile(w, r, localPath)
+			return
 		case strings.HasSuffix(r.URL.Path, ".html") && (strings.HasPrefix(r.URL.Path, "/community/") || strings.HasPrefix(r.URL.Path, "/shroombrew/")):
 			name := strings.TrimSuffix(filepath.Base(r.URL.Path), ".html")
 			if name == "index" {

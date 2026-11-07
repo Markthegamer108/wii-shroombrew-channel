@@ -305,8 +305,9 @@
       audio = new Audio(base + "/snd/" + list[audioIndex] + ".mp3");
       audio.volume = 0.35;
       audio.loop = list.length === 1 || audioIndex === 1;
+      // Try muted autoplay first (works without user interaction in most browsers)
+      audio.muted = true;
       if (saved) {
-        // Add the moments spent loading this page so the beat lines up.
         var resumeAt = saved.t + (saved.playing ? (new Date().getTime() - saved.at) / 1000 : 0);
         audio.addEventListener("loadedmetadata", function seek() {
           audio.removeEventListener("loadedmetadata", seek);
@@ -317,7 +318,6 @@
       setInterval(savePosition, 1000);
       window.addEventListener("pagehide", savePosition);
       audio.addEventListener("ended", function () {
-        // The intro plays once, then the loop repeats, as in the shop.
         if (list.length > 1 && audioIndex === 0) {
           audioIndex = 1;
           audio.src = base + "/snd/" + list[1] + ".mp3";
@@ -327,7 +327,19 @@
       });
     }
     var p = audio.play();
-    if (p && p["catch"]) p["catch"](function () {});
+    if (p && p["catch"]) p["catch"](function () {
+      // Muted autoplay failed too, will retry on first user interaction via unlock()
+    });
+    // Unmute on first user interaction
+    function unmute() {
+      if (audio) { audio.muted = false; }
+      document.removeEventListener("pointerdown", unmute, true);
+      document.removeEventListener("touchend", unmute, true);
+      document.removeEventListener("keydown", unmute, true);
+    }
+    document.addEventListener("pointerdown", unmute, true);
+    document.addEventListener("touchend", unmute, true);
+    document.addEventListener("keydown", unmute, true);
   }
   function stopMusic() { wantsMusic = false; if (audio) audio.pause(); }
   // Browsers only allow sound after the first click or key press.

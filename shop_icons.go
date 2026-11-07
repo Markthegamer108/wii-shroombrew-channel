@@ -21,6 +21,7 @@ import (
 	"strings"
 	"sync"
 
+	drawx "golang.org/x/image/draw"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/gofont/gobold"
 	"golang.org/x/image/font/opentype"
@@ -259,6 +260,8 @@ var (
 	placeholderFaceOnce sync.Once
 	placeholderFace     font.Face
 	placeholderCache    sync.Map // slug -> []byte
+	flashLogoOnce       sync.Once
+	flashLogo           image.Image
 )
 
 func placeholderIcon(app catalogApp) []byte {
@@ -295,6 +298,34 @@ func drawPlaceholder(app catalogApp) []byte {
 	} {
 		draw.Draw(img, r, &image.Uniform{frame}, image.Point{}, draw.Over)
 	}
+	// Use Flash logo for Flash category games
+	if strings.ToLower(app.Category) == "flash" {
+		loadFlashLogo()
+		if flashLogo != nil {
+			// Scale logo to fit in the center (max 80% of tile size)
+			maxW := w * 8 / 10
+			maxH := h * 8 / 10
+			logoW := flashLogo.Bounds().Dx()
+			logoH := flashLogo.Bounds().Dy()
+			scale := 1.0
+			if logoW > maxW {
+				scale = float64(maxW) / float64(logoW)
+			}
+			if float64(logoH)*scale > float64(maxH) {
+				scale = float64(maxH) / float64(logoH)
+			}
+			dstW := int(float64(logoW) * scale)
+			dstH := int(float64(logoH) * scale)
+			dstX := (w - dstW) / 2
+			dstY := (h - dstH) / 2
+			drawx.CatmullRom.Scale(img, image.Rect(dstX, dstY, dstX+dstW, dstY+dstH), flashLogo, flashLogo.Bounds(), draw.Over, nil)
+			var buf bytes.Buffer
+			if err := png.Encode(&buf, img); err != nil {
+				return nil
+			}
+			return buf.Bytes()
+		}
+	}
 	if face := placeholderFaceFor(); face != nil {
 		if letter := iconLetter(app); letter != "" {
 			drawer := &font.Drawer{Dst: img, Src: image.NewUniform(color.NRGBA{0, 0, 0, 90})}
@@ -316,6 +347,25 @@ func drawPlaceholder(app catalogApp) []byte {
 		return nil
 	}
 	return buf.Bytes()
+}
+
+func loadFlashLogo() {
+	flashLogoOnce.Do(func() {
+		// Try multiple locations: local dev (icons/flash.png), server (/opt/shroombrew/icons/flash.png)
+		paths := []string{"icons/flash.png", "/opt/shroombrew/icons/flash.png"}
+		for _, p := range paths {
+			f, err := os.Open(p)
+			if err != nil {
+				continue
+			}
+			defer f.Close()
+			img, err := png.Decode(f)
+			if err == nil {
+				flashLogo = img
+				return
+			}
+		}
+	})
 }
 
 func placeholderFaceFor() font.Face {
@@ -355,6 +405,8 @@ func placeholderColors(app catalogApp) (color.RGBA, color.RGBA) {
 		return color.RGBA{0x35, 0xA8, 0x5C, 255}, color.RGBA{0x17, 0x5A, 0x32, 255}
 	case "dlc":
 		return color.RGBA{0x8E, 0x5B, 0xB8, 255}, color.RGBA{0x4A, 0x2B, 0x63, 255}
+	case "flash":
+		return color.RGBA{0xE8, 0x3E, 0x3E, 255}, color.RGBA{0x8B, 0x1A, 0x1A, 255}
 	}
 	return color.RGBA{0x4A, 0x90, 0xC4, 255}, color.RGBA{0x1F, 0x3F, 0x5E, 255}
 }
