@@ -312,6 +312,8 @@ var content_finished_loading = function(iframe) {
       loadsnd.currentTime = 0;
     }
     if (!introplayed) {
+      loadsnd.pause();
+      loadsnd.currentTime = 0;
       var tp = theme1.play();
       if (tp !== undefined && tp.catch) { tp.catch(function(){}); }
     }
