@@ -126,6 +126,9 @@ var imgloader = new Image();
 imgloader.src = "img/ringgray.png"; // I should probably have it load some other stuff.
 var loadsnd = new Audio('snd/load.mp3');
 var now = new Date();
+// #fxdate=YYYY-MM-DD previews a special day's music (and, via shroombrew-fx.js, its look).
+var fxdate = /fxdate=(\d{4})-(\d{2})-(\d{2})/.exec(location.hash);
+if (fxdate) now = new Date(+fxdate[1], +fxdate[2] - 1, +fxdate[3], 12);
 if (now.getMonth() == 3 && now.getDate() == 1) {
   document.title = "Wiizer Shop Channel";
   var theme1 = new Audio('snd/theme1deranged.mp3');
