@@ -110,6 +110,10 @@ func (s *storefront) featureHandler(next http.Handler) http.Handler {
 			w.Write(data)
 		case strings.HasPrefix(r.URL.Path, "/community/api/"):
 			s.communityAPI(w, r)
+		case r.URL.Path == "/wad" || r.URL.Path == "/wad/":
+			s.wadPage(w, r)
+		case r.URL.Path == "/wad/"+wadInstallName:
+			s.wadDownload(w, r)
 		case r.URL.Path == "/friends":
 			s.friendsPage(w, r)
 		case r.URL.Path == "/gift":
@@ -126,6 +130,33 @@ func (s *storefront) featureHandler(next http.Handler) http.Handler {
 			s.noticePage(w, r)
 		case r.URL.Path == "/device/register":
 			s.deviceRegister(w, r)
+		case r.URL.Path == "/startup" && r.URL.Query().Get("initpage") == "showManual":
+			id := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("titleId")))
+			if len(id) != 16 {
+				http.NotFound(w, r)
+				return
+			}
+			http.Redirect(w, r, "/manual?titleId="+url.QueryEscape(id), http.StatusFound)
+			return
+		case r.URL.Path == "/startup" && r.URL.Query().Get("initpage") == "showTitle":
+			// The native channel asks for a title's detail page by title ID.
+			id := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("titleId")))
+			if len(id) != 16 {
+				http.NotFound(w, r)
+				return
+			}
+			http.Redirect(w, r, "/oss/serv/B_05.html?titleId="+url.QueryEscape(id), http.StatusFound)
+			return
+		case r.URL.Path == "/startup" && r.URL.Query().Get("initpage") == "showHelp":
+			// The native Shopping Guide/help entry point.
+			http.Redirect(w, r, "/help", http.StatusFound)
+			return
+		case r.URL.Path == "/oss/getLog":
+			// The channel posts diagnostics here; the shop itself never reads
+			// the response.
+			w.Header().Set("Cache-Control", "no-store")
+			w.WriteHeader(http.StatusOK)
+			return
 		case (r.URL.Path == "/" || r.URL.Path == "/startup") && r.Method == http.MethodGet && isWiiShopUA(r):
 			s.connectingPage(w, r)
 		case r.URL.Path == "/language":

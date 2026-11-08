@@ -65,7 +65,7 @@ func splitFoot(content string) (string, []shellButton) {
 	return content[:m[0]], buttons
 }
 
-const shellDots = "･････････････････････････････････････････････････････････････････････････････"
+const shellDots = "･･･････････････････････････････････････････････････････････････････････････"
 
 // The original shop drew nothing in CSS: every button, row and frame is one of
 // its own images with text laid over it, and hovering swaps *_a for *_b. The
@@ -126,7 +126,7 @@ table.aa .n{text-align:right;white-space:nowrap}
 #newsBox .body p{margin:0 0 10px}
 #newsBox .blue{color:#34beed}
 #upperLineLong{position:absolute;left:4px;top:59px;width:600px;height:10px;z-index:100}
-.dot{font-family:'Wii NTLG PGothic JPN Regular' !important;font-size:16px;color:#8C8C8C}
+.dot{white-space:nowrap;font-family:'Wii NTLG PGothic JPN Regular' !important;font-size:16px;color:#8C8C8C}
 #line01{position:absolute;left:4px;top:59px;width:473px;height:10px;z-index:98}
 #line02{position:absolute;left:4px;top:363px;width:600px;height:10px;z-index:100}
 `

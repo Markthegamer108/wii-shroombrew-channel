@@ -8,6 +8,11 @@ if (typeof window.trace !== 'function') window.trace = function() {};
 // Opera 9.30 predates String.includes; buttons.js calls it inside setUnderButtonL,
 // and the throw stopped page setup after the first button.
 if (typeof String.prototype.includes !== 'function') String.prototype.includes = function(s, from) { return this.indexOf(s, from || 0) !== -1; };
+if (typeof String.prototype.startsWith !== 'function') String.prototype.startsWith = function(s, from) { return this.indexOf(s, from || 0) === 0; };
+if (typeof Array.prototype.includes !== 'function') Array.prototype.includes = function(s, from) {
+  for (var i = from || 0; i < this.length; i++) if (this[i] === s) return true;
+  return false;
+};
 // The archived pages call setCursor, which only the desktop copy of oss.js defines;
 // a declaration in oss.js replaces this stub where it exists.
 if (typeof window.setCursor !== 'function') window.setCursor = function() {};

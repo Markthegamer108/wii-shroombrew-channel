@@ -1119,6 +1119,19 @@ func (s *storefront) classicSiteHandler(soap http.Handler) http.Handler {
 			soap.ServeHTTP(w, r)
 			return
 		}
+		// The archived registration pages rely on the channel's old registration
+		// HTML (L_03/Register/CheckBalance) which we do not ship. The Shroombrew
+		// connecting page performs the same device registration and then opens
+		// W_01, so send the console there instead of a 404.
+		if isWiiShopUA(r) {
+			switch strings.ToLower(path.Clean(r.URL.Path)) {
+			case "/oss/serv/l_03.jsp", "/oss/serv/l_03.html", "/oss/serv/register.jsp",
+				"/oss/serv/register.html", "/oss/serv/checkbalance.jsp",
+				"/oss/serv/checkregistered.jsp", "/oss/serv/checkregistered.html":
+				http.Redirect(w, r, "/startup", http.StatusFound)
+				return
+			}
+		}
 		if strings.HasPrefix(r.URL.Path, "/shop/") {
 			http.StripPrefix("/shop/", http.FileServer(http.FS(shopAssets))).ServeHTTP(w, r)
 			return
@@ -1399,9 +1412,12 @@ func (s *storefront) classicSiteHandler(soap http.Handler) http.Handler {
 				// Mocks for Wii-only objects so the archived page scripts run in a
 				// browser: ec, wiiShop, catalogue lists and the shop's region
 				// setting (pages read parent.region / parent.showallgames from the
-				// shell that hosts them in an iframe).
-				mockScript := `<script>try{var ec={SupportsSession:function(){return false},getSessionValue:function(){return ''},getDeviceInfo:function(){var m=/(?:^|;\s*)shroomPC=([a-z0-9]+)/.exec(document.cookie);var lvl=m?m[1]:'';var age=lvl=='e'?6:lvl=='e10'?10:lvl=='t'?13:lvl=='m'?18:null;return {blockSize:16384,totalBlocks:2000,usedBlocks:0,freeBlocks:2000,region:'USA',language:'en',country:'US',isParentalControlEnabled:age!==null,userAge:age===null?20:age,netContentRestrictions:0};}};var wiiShop=function(){this.connecting='Connecting. Please wait...';this.endWaiting=function(){};this.setWallpaper=function(){};this.disableHRP=function(){};this.enableHRP=function(){};this.jumpToEULAViewer=function(){};this.jumpToManualChannel=function(){};this.returnToUpdate=function(){};this.returnToMenu=function(){};this.jumpDataMng=function(){};this.retry=function(){};this.beginWaiting=function(){};this.endWaiting=function(){};this.error=function(){};this.closeManual=function(){};};var ECPrice=function(){};var ECAccountPayment=function(){};var ECTitleLimits=function(){};var ecCheck=true;var buttonsCheck=true;var imagesCheck=true;var soundCheck=true;var errorCheck=true;var homedata=[[],[],[],[],[],[],[]];window.region='US';try{window.parent.region='US';window.parent.showallgames=false;window.parent.hidelinkedgames=false;}catch(e){}if(window.parent===window&&typeof window.keyboard!='function'){window.keyboard=function(input,message){var v=window.prompt(message||'','');if(v===null)return;input.value=v;if(typeof input.onchange=='function')input.onchange();};}}catch(e){}</script>`
-				text = strings.Replace(text, "<head>", "<head>"+mockScript, 1)
+				// shell that hosts them in an iframe). A real console must keep its
+				// native ec/wiiShop objects or ECS purchases and downloads break.
+				if !isWiiClient(r) {
+					mockScript := `<script>try{var ec={SupportsSession:function(){return false},getSessionValue:function(){return ''},getDeviceInfo:function(){var m=/(?:^|;\s*)shroomPC=([a-z0-9]+)/.exec(document.cookie);var lvl=m?m[1]:'';var age=lvl=='e'?6:lvl=='e10'?10:lvl=='t'?13:lvl=='m'?18:null;return {blockSize:16384,totalBlocks:2000,usedBlocks:0,freeBlocks:2000,region:'USA',language:'en',country:'US',isParentalControlEnabled:age!==null,userAge:age===null?20:age,netContentRestrictions:0};}};var wiiShop=function(){this.connecting='Connecting. Please wait...';this.endWaiting=function(){};this.setWallpaper=function(){};this.disableHRP=function(){};this.enableHRP=function(){};this.jumpToEULAViewer=function(){};this.jumpToManualChannel=function(){};this.returnToUpdate=function(){};this.returnToMenu=function(){};this.jumpDataMng=function(){};this.retry=function(){};this.beginWaiting=function(){};this.endWaiting=function(){};this.error=function(){};this.closeManual=function(){};};var ECPrice=function(){};var ECAccountPayment=function(){};var ECTitleLimits=function(){};var ecCheck=true;var buttonsCheck=true;var imagesCheck=true;var soundCheck=true;var errorCheck=true;var homedata=[[],[],[],[],[],[],[]];window.region='US';try{window.parent.region='US';window.parent.showallgames=false;window.parent.hidelinkedgames=false;}catch(e){}if(window.parent===window&&typeof window.keyboard!='function'){window.keyboard=function(input,message){var v=window.prompt(message||'','');if(v===null)return;input.value=v;if(typeof input.onchange=='function')input.onchange();};}}catch(e){}</script>`
+					text = strings.Replace(text, "<head>", "<head>"+mockScript, 1)
+				}
 				text = strings.Replace(text, "</body>", "<script type=\"text/javascript\" src=\"/shroombrew-navigation.js\"></script><script type=\"text/javascript\" src=\"/shroombrew-balance.js\"></script></body>", 1)
 			}
 			if filePath == "/oss/serv/B_04.html" {
@@ -1420,6 +1436,16 @@ func (s *storefront) classicSiteHandler(soap http.Handler) http.Handler {
 				text = strings.Replace(text, "</body>", "<script type=\"text/javascript\" src=\"/shroombrew-popular.js\"></script><script type=\"text/javascript\" src=\"/shroombrew-catalog.js\"></script></body>", 1)
 			}
 			if filePath == "/oss/serv/B_16.html" || filePath == "/oss/serv/B_17.html" {
+				// The archived genre/publisher renderer is ES6 (template literals,
+				// let/const, arrow-free but still unparsable on Wii Opera). Drop
+				// those blocks and use the ES3 renderer below.
+				text = shopInlineScripts.ReplaceAllStringFunc(text, func(block string) string {
+					if strings.Contains(block, "`") || strings.Contains(block, "=>") ||
+						strings.Contains(block, "const ") || strings.Contains(block, "let ") {
+						return ""
+					}
+					return block
+				})
 				text = strings.Replace(text, "</body>", "<script type=\"text/javascript\" src=\"/shroombrew-browse.js\"></script></body>", 1)
 			}
 			if filePath == "/oss/serv/W_01.html" {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"html"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -23,6 +24,24 @@ func writeDestinationChoice(w http.ResponseWriter, r *http.Request, app catalogA
 	writeShopPage(w, tl(lang, "w_dest_title"), content)
 }
 
+// wscBaseDomain is the short host patched into the real Wii Shop WAD.
+// WSC-Patcher's 12-character domain limit rules out shroombrew.org.
+func wscBaseDomain() string {
+	if d := strings.TrimSpace(os.Getenv("SHROOMBREW_WSC_DOMAIN")); d != "" {
+		return strings.ToLower(strings.Trim(d, "."))
+	}
+	return "wiirw.bot.nu"
+}
+
+func isWSCShopHost(host string) bool {
+	host = strings.ToLower(strings.TrimSuffix(strings.TrimSpace(host), "."))
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		host = h
+	}
+	base := wscBaseDomain()
+	return host == base || strings.HasSuffix(host, "."+base)
+}
+
 // Native EC is an explicit development mode. It uses the console's EC APIs,
 // rather than the browser wallet or server-side ZIP preparation APIs.
 func (s *storefront) nativeECHandler(next http.Handler) http.Handler {
@@ -31,7 +50,11 @@ func (s *storefront) nativeECHandler(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		if (r.URL.Path == "/" || r.URL.Path == "/startup") && strings.Contains(r.UserAgent(), "Wii Shop Channel/21.0(N)") {
+		// A WSC-Patcher client reaches the HTML shop through its own host.
+		// Do not divert it to the native-EC development screens.
+		if (r.URL.Path == "/" || r.URL.Path == "/startup") &&
+			strings.Contains(r.UserAgent(), "Wii Shop Channel/21.0(N)") &&
+			!isWSCShopHost(r.Host) {
 			http.Redirect(w, r, "/native-ec/", http.StatusSeeOther)
 			return
 		}

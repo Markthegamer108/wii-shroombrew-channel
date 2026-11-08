@@ -61,6 +61,44 @@ func TestRepairedFrontendRoutes(t *testing.T) {
 	if w.Code != 409 {
 		t.Fatalf("experimental native route exposed: %d", w.Code)
 	}
+	// The real-Wii WAD reaches the HTML entry point on its patched host.
+	t.Setenv("SHROOMBREW_NATIVE_EC", "1")
+	ecChain := s.nativeECHandler(h)
+	for _, tc := range []struct {
+		host, path string
+		code       int
+		text       string
+	}{
+		{"oss-auth.wiirw.bot.nu", "/startup", 200, "Connecting. Please wait..."},
+		{"shop.shroombrew.org", "/startup", 303, ""},
+		{"oss-auth.wiirw.bot.nu", "/oss/getLog", 200, ""},
+	} {
+		w = httptest.NewRecorder()
+		r := httptest.NewRequest("GET", "https://"+tc.host+tc.path, nil)
+		r.Header.Set("User-Agent", wiiUA)
+		ecChain.ServeHTTP(w, r)
+		if w.Code != tc.code {
+			t.Fatalf("%s%s: status %d, want %d", tc.host, tc.path, w.Code, tc.code)
+		}
+		if tc.text != "" && !strings.Contains(w.Body.String(), tc.text) {
+			t.Fatalf("%s%s: missing %q", tc.host, tc.path, tc.text)
+		}
+	}
+	// Manual launches from the channel go to the archived operations guide.
+	w = httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/startup?initpage=showManual&titleId=0001000158483245", nil)
+	r.Header.Set("User-Agent", wiiUA)
+	h.ServeHTTP(w, r)
+	if w.Code != http.StatusFound || !strings.HasPrefix(w.Header().Get("Location"), "/manual?titleId=") {
+		t.Fatalf("manual launch: %d %q", w.Code, w.Header().Get("Location"))
+	}
+	// The WAD install page is public and names the patched download.
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest("GET", "/wad", nil))
+	if w.Code != 200 || !strings.Contains(w.Body.String(), "Install Shroombrew on a real Wii") ||
+		!strings.Contains(w.Body.String(), wadInstallName) {
+		t.Fatalf("wad page: %d", w.Code)
+	}
 	w = httptest.NewRecorder()
 	h.ServeHTTP(w, httptest.NewRequest("POST", "/wii-install/start", nil))
 	if w.Code != 409 {
