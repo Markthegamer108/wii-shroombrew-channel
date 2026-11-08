@@ -566,7 +566,7 @@ function directShopHome(){
   shroomNavigate('/oss/serv/W_03.html'); return false;
  };
 }
-// W_01 keeps the connecting screen's two dotted rules (injected on the page).
+// W_01 keeps the connecting screen's two rules (injected on the page).
 if(window.setTimeout)setTimeout(function(){fill();arrows();ensurePageChangeAudio();schedule();},900);else{fill();arrows();ensurePageChangeAudio();}
 if(window.setTimeout)setTimeout(directShopHome,100);else directShopHome();
 })();`)
