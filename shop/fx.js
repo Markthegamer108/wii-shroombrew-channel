@@ -16,7 +16,8 @@
    site applies to both. */
 (function () {
   if (window.shroomFX) return;
-  var isShop = !!document.getElementById("mariocanvas") || /^shop\./.test(location.hostname);
+  // The server also hosts a copy of the website under /community/.
+  var isShop = !!document.getElementById("mariocanvas") || (/^shop\./.test(location.hostname) && location.pathname.indexOf("/community/") !== 0);
   var base = isShop ? "" : "https://shop.shroombrew.org";
 
   // #fxdate=YYYY-MM-DD previews another day's effects. (Not a query string:
@@ -305,9 +306,8 @@
       audio = new Audio(base + "/snd/" + list[audioIndex] + ".mp3");
       audio.volume = 0.35;
       audio.loop = list.length === 1 || audioIndex === 1;
-      // Try muted autoplay first (works without user interaction in most browsers)
-      audio.muted = true;
       if (saved) {
+        // Add the moments spent loading this page so the beat lines up.
         var resumeAt = saved.t + (saved.playing ? (new Date().getTime() - saved.at) / 1000 : 0);
         audio.addEventListener("loadedmetadata", function seek() {
           audio.removeEventListener("loadedmetadata", seek);
@@ -318,6 +318,7 @@
       setInterval(savePosition, 1000);
       window.addEventListener("pagehide", savePosition);
       audio.addEventListener("ended", function () {
+        // The intro plays once, then the loop repeats, as in the shop.
         if (list.length > 1 && audioIndex === 0) {
           audioIndex = 1;
           audio.src = base + "/snd/" + list[1] + ".mp3";
@@ -326,28 +327,18 @@
         }
       });
     }
+    // Plays straight away when the browser allows it (Chrome does once the
+    // site has been used a few times, or with Sound set to Allow for it).
     var p = audio.play();
-    if (p && p["catch"]) p["catch"](function () {
-      // Muted autoplay failed too, will retry on first user interaction via unlock()
-    });
-    // Unmute on first user interaction
-    function unmute() {
-      if (audio) { audio.muted = false; }
-      document.removeEventListener("pointerdown", unmute, true);
-      document.removeEventListener("touchend", unmute, true);
-      document.removeEventListener("keydown", unmute, true);
-    }
-    document.addEventListener("pointerdown", unmute, true);
-    document.addEventListener("touchend", unmute, true);
-    document.addEventListener("keydown", unmute, true);
+    if (p && p["catch"]) p["catch"](function () {});
   }
   function stopMusic() { wantsMusic = false; if (audio) audio.pause(); }
-  // Browsers only allow sound after the first click or key press.
+  // Otherwise the first click, tap or key anywhere on the page starts it.
+  var UNLOCK = ["pointerdown", "mousedown", "touchend", "keydown"];
   function unlock() {
-    document.removeEventListener("pointerdown", unlock, true);
-    document.removeEventListener("touchend", unlock, true);
-    document.removeEventListener("keydown", unlock, true);
-    if (wantsMusic && audio && audio.paused) startMusic();
+    if (!wantsMusic || !audio || !audio.paused) return;
+    startMusic();
+    if (!audio.paused) for (var i = 0; i < UNLOCK.length; i++) document.removeEventListener(UNLOCK[i], unlock, true);
   }
 
   // ---- dark mode (shroombrew.org) -------------------------------------------
@@ -480,9 +471,7 @@
     },
     playing: function () { return !!audio && !audio.paused; }
   };
-  document.addEventListener("pointerdown", unlock, true);
-  document.addEventListener("touchend", unlock, true); // older iPhones/iPads
-  document.addEventListener("keydown", unlock, true);
+  for (var u = 0; u < UNLOCK.length; u++) document.addEventListener(UNLOCK[u], unlock, true);
   function init() { buildPanel(); apply(); scheduleMidnight(); }
   if (document.body) init(); else document.addEventListener("DOMContentLoaded", init);
 })();

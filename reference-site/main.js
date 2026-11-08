@@ -197,27 +197,26 @@ var kbd_ok = new Audio("snd/kbd_ok.wav");
 var soundlist = [document.getElementById("cSE_Forcus"), document.getElementById("cSE_Decide"), document.getElementById("cSE_Cancel"), document.getElementById("cSE_Finish"), loadsnd, kbd_open, kbd_hover, kbd_key, kbd_space, kbd_backspace, kbd_denied, kbd_okhover, kbd_ok];
 var introplayed = false;
 var loading = true;
-// Browsers block audio before the first user interaction, so the BGM started by
-// the landing auto-enter (not a click) is paused. Resume it on first interaction.
-var shroomResumed = false;
+// The BGM starts on its own when the browser allows sound without a click.
+// When it doesn't, the first click, tap or key press starts it - including
+// ones inside the shop pages, which live in iframes and don't bubble up here.
 function shroomResumeAudio() {
-  if (shroomResumed) { return; }
-  shroomResumed = true;
+  if (loading && !introplayed) { return; }
+  var t = introplayed ? theme2 : theme1;
+  if (!t.paused) { return; }
   try {
-    if (introplayed) {
-      theme2.play();
-    } else {
-      theme1.play();
-    }
-    if (loading) {
-      var p = loadsnd.play();
-      if (p !== undefined && p.catch) { p.catch(function(){}); }
-    }
+    var p = t.play();
+    if (p !== undefined && p.catch) { p.catch(function(){}); }
   } catch (e) {}
 }
-document.addEventListener('pointerdown', shroomResumeAudio, true);
-document.addEventListener('touchstart', shroomResumeAudio, true);
-document.addEventListener('keydown', shroomResumeAudio, true);
+function shroomListen(doc) {
+  if (!doc || doc.__shroomListen) { return; }
+  doc.__shroomListen = true;
+  ['pointerdown', 'mousedown', 'touchstart', 'keydown'].forEach(function(type) {
+    doc.addEventListener(type, shroomResumeAudio, true);
+  });
+}
+shroomListen(document);
 var ring1 = document.getElementById("load1");
 var ring2 = document.getElementById("load2");
 var hist = [];
@@ -322,6 +321,7 @@ var content_finished_loading = function(iframe) {
     }
   }
   iframe.contentWindow.onmousemove = framecursormove;
+  try { shroomListen(iframe.contentWindow.document); } catch (e) {}
   document.getElementById("cursorfield").style.zIndex = -999;
   iframe.style.zIndex = 2;
   otheriframe.style.zIndex = 1;
