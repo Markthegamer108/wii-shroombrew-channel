@@ -566,7 +566,7 @@ function directShopHome(){
   shroomNavigate('/oss/serv/W_03.html'); return false;
  };
 }
-// W_01 has no rules of dots; the shop and its revivals draw none on this page.
+// W_01 keeps the connecting screen's two dotted rules (injected on the page).
 if(window.setTimeout)setTimeout(function(){fill();arrows();ensurePageChangeAudio();schedule();},900);else{fill();arrows();ensurePageChangeAudio();}
 if(window.setTimeout)setTimeout(directShopHome,100);else directShopHome();
 })();`)
@@ -1340,7 +1340,11 @@ func (s *storefront) classicSiteHandler(soap http.Handler) http.Handler {
 				text = strings.Replace(text, "</body>", "<script type=\"text/javascript\" src=\"/shroombrew-popular.js\"></script><script type=\"text/javascript\" src=\"/shroombrew-catalog.js\"></script></body>", 1)
 			}
 			if filePath == "/oss/serv/W_01.html" {
-				text = strings.Replace(text, "</body>", "<script type=\"text/javascript\" src=\"/shroombrew-welcome.js\"></script></body>", 1)
+				// The connecting screen draws the shop's two dotted rules, but the
+				// captured W_01 page has none, so they vanished as soon as the shop
+				// opened. Put the same rules back on the first shop page.
+				dots := `<div class="dot" id="line01">` + shellDots + `</div><div class="dot" id="line02">` + shellDots + `</div>`
+				text = strings.Replace(text, "</body>", dots+"<script type=\"text/javascript\" src=\"/shroombrew-welcome.js\"></script></body>", 1)
 			}
 			if filePath == "/oss/serv/B_05.html" {
 				text = strings.Replace(text, "</body>", "<script type=\"text/javascript\" src=\"/shroombrew-detail.js\"></script></body>", 1)
