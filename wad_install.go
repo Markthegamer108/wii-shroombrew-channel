@@ -43,7 +43,7 @@ patch or rebuild anything.</p>
 ` + download + `
 <h2>Before you install</h2>
 <ul>
-<li>This is only for an <b>original Wii</b>. Do not install it on a vWii or Wii U.</li>
+<li>This is the <b>USA v21</b> channel for an <b>original Wii</b>. Do not install it on a vWii or Wii U.</li>
 <li>Make a NAND backup first. Replacing the Shop Channel is a system-title change.</li>
 <li>Use a signature-bypassing WAD installer. YAWM ModMii Edition or Wii Mod Lite
 running under IOS249 is the recommended path. Do not use an installer that refuses
