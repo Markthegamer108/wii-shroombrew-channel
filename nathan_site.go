@@ -717,6 +717,9 @@ func classicMoreDetailsPage(text string, app catalogApp, lang string) string {
 		desc = strings.ReplaceAll(desc, "\n\n", "<p>")
 		desc = strings.ReplaceAll(desc, "\n", "<br>")
 	}
+	if _, ok := findManual(titleID, lang); ok {
+		desc += `<p><a href="/manual?titleId=` + titleID + `">Operations Guide</a></p>`
+	}
 	if start := strings.Index(text, `<div id="text" class="buttonTextBlackM">`); start >= 0 {
 		if end := strings.Index(text[start:], `<div id="image02">`); end > 0 {
 			text = text[:start] + `<div id="text" class="buttonTextBlackM">` + desc + "</div>\n  " + text[start+end:]
@@ -815,13 +818,20 @@ function makeDownloadButton(){
  var esrb={'E':1,'E10':1,'T':1,'M':1,'EC':1,'AO':1,'RP':1};
  if(game.rating&&esrb[game.rating]){
   for(var r=0;r<ratingIds.length;r++){var shown=document.getElementById(ratingIds[r]);if(shown)shown.style.display='';}
-  var pic=document.getElementById('RatingPic');if(pic){pic.src='/oss/oss/common/images/Pic_Rating/ESRB/ESRB_'+game.rating+'.gif';pic.alt='ESRB '+game.rating;}
+  var pic=document.getElementById('RatingPic');if(pic){pic.src='/oss/oss/common/images/Pic_Rating/ESRB/ESRB_'+game.rating+'.gif';pic.alt='ESRB '+game.rating;pic.style.cursor='pointer';pic.onclick=function(){try{wiiSelectSound();}catch(e){}showPage('B_07.html?titleId='+selected);};}
   put('Descriptors',game.ratingdetails||'');
  }else{
   for(var q=0;q<ratingIds.length;q++){var rating=document.getElementById(ratingIds[q]);if(rating)rating.style.display='none';}
  }
  var unavailable=document.getElementById('notAvailableMsg');if(unavailable)unavailable.style.display='none';
- var gift=document.getElementById('giftButton');if(gift)gift.style.display='none';
+ // Gift this title to another Wii. The real shop keeps this as a separate
+ // purchase path; our community layer owns the points and pending gift.
+ var giftLink=document.getElementById('shroomGiftLink');
+ if(!giftLink){giftLink=document.createElement('a');giftLink.id='shroomGiftLink';giftLink.style.cssText='position:absolute;left:438px;top:338px;width:110px;text-align:center;color:#34beed;font-size:15px;text-decoration:underline;z-index:40';document.body.appendChild(giftLink);}
+ giftLink.href='/gift?titleId='+selected;
+ giftLink.onclick=function(){try{wiiSelectSound();}catch(e){}shroomNavigate('/gift?titleId='+selected);return false;};
+ giftLink.innerHTML='Gift';
+ giftLink.style.display=game.notAvailable?'none':'';
 }
 
 window.initPage=function(){shroomInstallBridge();if(typeof setUnderButtonL==='function')setUnderButtonL(true,'Back','javascript:showBack()','wiiCancelSound()');makeDownloadButton();};
@@ -1340,6 +1350,11 @@ func (s *storefront) classicSiteHandler(soap http.Handler) http.Handler {
 					if app, ok := s.appByTitleID(id); ok {
 						text = classicMoreDetailsPage(text, app, langFor(r))
 					}
+				}
+			}
+			if filePath == "/oss/serv/B_07.html" {
+				if id := strings.ToUpper(r.URL.Query().Get("titleId")); id != "" {
+					text = strings.Replace(text, `<iframe src=""`, `<iframe src="/rating?titleId=`+url.QueryEscape(id)+`"`, 1)
 				}
 			}
 			if strings.Contains(r.UserAgent(), "Wii Shop Channel/") || strings.Contains(r.UserAgent(), "Nintendo Wii") {

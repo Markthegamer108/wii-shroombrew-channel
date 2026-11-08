@@ -112,7 +112,7 @@
   status.style.top='148px';
   text('archiveNote',L('Preparing software for your SD card.'));
   var animPick=parseInt((location.search.match(/[?&]anim=(\d)/)||[])[1],10);// 0 coins, 1 Star Mario, 2 Bullet Bills, 3 Fire Mario; ?anim=N forces one.
-   if(!(animPick>=0&&animPick<=3))animPick=Math.floor(Math.random()*4);var animation=new ShroomMarioDownload(document.body,animPick),finished=false;
+   if(!(animPick>=0&&animPick<=5)){animPick=Math.floor(Math.random()*4);if(Math.random()<0.05)animPick=4;}var animation=new ShroomMarioDownload(document.body,animPick),finished=false;
   function readyActions(){text('archiveStatus',L('Your homebrew package is ready.'));text('archiveNote',L('Use Shroombrew Installer on your Wii, or')+' ');var zip=document.createElement('a');zip.href='#';zip.appendChild(document.createTextNode(L('download the ZIP instead.')));zip.onclick=function(){submit();return false;};el('archiveNote').appendChild(zip);button('R',L('Install on Wii'),function(){el('archiveForm').action='/shop-download/installer/'+encodeURIComponent(d.Job);submit();});}
   function finish(message,ready){if(finished)return;finished=true;text('archiveStatus',message);if(ready)animation.finish(readyActions);else animation.stop();}
   if(d.Mode==='pc'){

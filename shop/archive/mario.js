@@ -11,14 +11,39 @@
  */
 function ShroomMarioDownload(host, rank) {
  var self=this,base='/archive-shop/assets/anim/',tick=0,target=0,stage=0,x=-32,jump=0,hit=false,ending=0,callback=null,stopped=false;
- var RANK=(rank>=0&&rank<=3)?Math.floor(rank):0;
+ var RANK=(rank>=0&&rank<=5)?Math.floor(rank):0;
+ var SWIM=RANK===4;
+ var FORCE_LUIGI=RANK===5;
+ if(SWIM||FORCE_LUIGI)RANK=0;
  var STAR=RANK===1||RANK===2;
  var FIRE=RANK===3;
+ // Luigi is a rare everyday alternate; the swimming scene is rarer still.
+ var LUIGI=FORCE_LUIGI||(!SWIM&&RANK===0&&Math.random()<0.12);
  var scene=document.createElement('div');scene.id='shroomMarioScene';
  scene.style.cssText='position:absolute;left:44px;top:170px;width:520px;height:132px;overflow:hidden;z-index:60';
  scene.setAttribute('aria-label','Mario download animation');host.appendChild(scene);
  function sprite(name,w,h){var img=document.createElement('img');img.src=base+name+'.png';img.alt='';img.width=w;img.height=h;img.style.cssText='position:absolute;image-rendering:pixelated';scene.appendChild(img);return img;}
  function place(img,a,b){img.style.left=Math.round(a)+'px';img.style.top=Math.round(b)+'px';}
+ // Rare swimming scene: Mario and Luigi bob across a water strip. There are
+ // no blocks or coins; the download still owns completion.
+ if(SWIM){
+  var water=sprite('water',520,16);place(water,0,112);
+  var swimA=sprite('mario2',32,32),swimB=sprite('marioluigi2',32,32);
+  var ax=-50,bx=40,phase=0,finishAt=0;
+  var swimTimer=setInterval(function(){
+   phase++;var speed=2+Math.floor(target*4);ax+=speed;bx+=speed;
+   if(ax>540)ax=-60;if(bx>570)bx=-50;
+   var bob=Math.round(2*Math.sin(phase/5));
+   swimA.src=base+'mario'+((Math.floor(phase/6)%3)+2)+'.png';
+   swimB.src=base+'marioluigi'+((Math.floor(phase/6)%3)+2)+'.png';
+   place(swimA,ax,104+bob);place(swimB,bx,104-bob);place(water,0,112);
+   if(target>=1){if(!finishAt)finishAt=phase;if(phase-finishAt>20&&callback){var done=callback;callback=null;self.stop();done();}}
+  },33);
+  self.setProgress=function(value){target=Math.max(target,Math.min(1,Math.max(0,value)));};
+  self.stop=function(){if(stopped)return;stopped=true;clearInterval(swimTimer);if(scene.parentNode)scene.parentNode.removeChild(scene);};
+  self.finish=function(done){target=1;callback=done;};
+  return;
+ }
  var positions=[76,244,412],boxes=[],shadows=[];
  for(var i=0;i<3;i++){shadows[i]=sprite('shadowbox',40,40);place(shadows[i],positions[i]-8,18);boxes[i]=sprite('box',32,32);place(boxes[i],positions[i],18);}
  var shadow=sprite('shadow',32,8),mario=sprite('mario1',32,32),reward=sprite('boxcoin1',16,24);
@@ -40,6 +65,7 @@ function ShroomMarioDownload(host, rank) {
  // white cap and red overalls.
  function marioFrame(n){
   if(FIRE)return 'mariofire'+n;
+  if(LUIGI)return 'marioluigi'+n;
   if(!STAR)return 'mario'+n;
   return (Math.floor(tick/3)%2?'mariostarb':'mariostar')+n;
  }

@@ -111,6 +111,14 @@ func (s *storefront) featureHandler(next http.Handler) http.Handler {
 			s.communityAPI(w, r)
 		case r.URL.Path == "/friends":
 			s.friendsPage(w, r)
+		case r.URL.Path == "/gift":
+			s.giftPage(w, r)
+		case r.URL.Path == "/rating":
+			s.ratingPage(w, r)
+		case r.URL.Path == "/manual":
+			s.manualPage(w, r)
+		case strings.HasPrefix(r.URL.Path, "/manual/"):
+			s.manualFile(w, r)
 		case r.URL.Path == "/link":
 			s.linkPage(w, r)
 		case r.URL.Path == "/notice":

@@ -432,7 +432,7 @@ func (s *storefront) sendGift(ctx context.Context, from, toCode, slug, message s
 	if r := []rune(message); len(r) > 120 {
 		message = string(r[:120])
 	}
-	price := classicPrice(app.Slug)
+	price := classicPriceFor(app)
 	id, err := randomHex(12)
 	if err != nil {
 		return "", err

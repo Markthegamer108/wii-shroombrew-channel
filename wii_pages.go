@@ -209,6 +209,10 @@ func (s *storefront) friendsPage(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(&b, `<h2>%s</h2><p class="big">%s</p><p class="small">%s</p>`, esc(tl(lang, "f_code")), esc(code), esc(tl(lang, "f_share")))
 	fmt.Fprintf(&b, `<p>%s: <b>%s</b> (%d %s)</p>`, esc(tl(lang, "f_level")), esc(tier), n, esc(tl(lang, "f_refs")))
 	fmt.Fprintf(&b, `<h2>%s</h2><form method="post" action="/friends"><input type="hidden" name="csrf" value="%s"><input type="hidden" name="action" value="redeem"><p><input name="code" maxlength="14" size="14">%s</p></form>`, esc(tl(lang, "f_enter")), csrf, uiSubmit("", "", tl(lang, "f_redeem")))
+	if len(incoming) > 0 {
+		b.WriteString(`<p class="center"><img src="/oss/oss/common/images/banner/gift_b.gif" width="240" alt=""></p>`)
+		b.WriteString(`<h2>` + esc(tl(lang, "f_got")) + `</h2>`)
+	}
 	b.WriteString(`<h2>` + esc(tl(lang, "f_in")) + `</h2>`)
 	if len(incoming) == 0 {
 		b.WriteString(`<p class="small">` + esc(tl(lang, "f_nogifts")) + `</p>`)
@@ -226,6 +230,109 @@ func (s *storefront) friendsPage(w http.ResponseWriter, r *http.Request) {
 	}
 	b.WriteString(`<p></p>` + uiMenu("/link", "keys", tl(lang, "l_title")) + `</div>` + shopFootT(lang, "/settings"))
 	writeShopPage(w, tl(lang, "f_title"), b.String())
+}
+
+// ---- rating information ----------------------------------------------------
+
+// ratingPage fills B_07's 540x262 frame with the title's ESRB rating, icon and
+// content descriptors. The captured B_07 page is only an empty iframe shell;
+// the original rating HTML was not in the backup.
+func (s *storefront) ratingPage(w http.ResponseWriter, r *http.Request) {
+	id := strings.ToUpper(r.URL.Query().Get("titleId"))
+	app, ok := s.appByTitleID(id)
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	rating := strings.ToUpper(strings.TrimSpace(app.Rating))
+	descriptors := strings.TrimSpace(app.RatingDetails)
+	esc := html.EscapeString
+	var panel strings.Builder
+	panel.WriteString(`<div style="padding:10px 14px;font-size:14px">`)
+	panel.WriteString(`<div class="titleBlackL" style="font-size:20px;margin-bottom:6px">Rating Information</div>`)
+	panel.WriteString(`<p style="margin:0 0 8px"><b>` + esc(app.Name) + `</b></p>`)
+	if rating == "" {
+		panel.WriteString(`<p>No rating information is available for this title.</p>`)
+	} else {
+		panel.WriteString(`<img src="/oss/oss/common/images/Pic_Rating/ESRB/ESRB_` + esc(rating) + `.gif" width="46" height="69" style="float:left;margin:0 14px 8px 0" alt="ESRB ` + esc(rating) + `">`)
+		panel.WriteString(`<p><b>Rated ` + esc(rating) + `</b></p>`)
+		if descriptors != "" {
+			panel.WriteString(`<p>Content descriptors: ` + esc(descriptors) + `</p>`)
+		} else {
+			panel.WriteString(`<p>No content descriptors.</p>`)
+		}
+		panel.WriteString(`<p class="small">Rating information is provided by the Entertainment Software Rating Board.</p>`)
+	}
+	panel.WriteString(`</div>`)
+	page := `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Rating Information</title>` +
+		`<link rel="stylesheet" href="/oss/oss/common/css/oss.css">` +
+		`<style>html,body{margin:0;width:540px;height:262px;overflow:auto;background:#fff}body{font-family:'Wii NTLG PGothic JPN Regular',sans-serif;color:#323232}</style>` +
+		`</head><body>` + panel.String() + `</body></html>`
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	w.Write([]byte(page))
+}
+
+// ---- gifting ---------------------------------------------------------------
+
+// giftPage sends one catalogue title to another Wii's friend code. The
+// community API already holds the points, refunds and ownership rules; this is
+// the shop-side screen that starts the gift and shows the sending result.
+func (s *storefront) giftPage(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", 405)
+		return
+	}
+	lang := langFor(r)
+	wallet, err := walletID(w, r)
+	if err != nil {
+		http.Error(w, "Wallet unavailable", 500)
+		return
+	}
+	id := strings.ToUpper(r.URL.Query().Get("titleId"))
+	if id == "" {
+		id = strings.ToUpper(r.FormValue("titleId"))
+	}
+	app, ok := s.appByTitleID(id)
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	app = s.regionApp(app, r)
+	price := classicPriceFor(app)
+	csrf := csrfToken(wallet)
+	esc := html.EscapeString
+	var b strings.Builder
+	b.WriteString(`<div class="panel">`)
+	if r.Method == http.MethodPost {
+		if !validShopPost(r, wallet) {
+			http.Error(w, "Reload the page and try again", 403)
+			return
+		}
+		code := r.FormValue("code")
+		message := r.FormValue("message")
+		if _, sendErr := s.sendGift(r.Context(), wallet, code, app.Slug, message); sendErr != nil {
+			b.WriteString(`<p class="err"><b>` + esc(errText(lang, sendErr)) + `</b></p>`)
+			if sendErr == errNoPoints {
+				b.WriteString(`<p><a class="opt" href="/points?return=` + url.QueryEscape("/gift?titleId="+id) + `">` + esc(tl(lang, "g_add")) + `</a></p>`)
+			}
+		} else {
+			b.WriteString(`<p class="center">` + esc(tl(lang, "g_sent", "code", normalizeFriendCode(code))) + `</p>`)
+			b.WriteString(`<p class="center"><img src="/oss/oss/common/images/banner/gift_b.gif" width="240" alt=""></p>`)
+			b.WriteString(`<p class="center">` + uiButton("/oss/serv/B_05.html?titleId="+id, tl(lang, "g_continue")) + `</p>`)
+			b.WriteString(`</div>` + shopFootT(lang, "/oss/serv/B_05.html?titleId="+id))
+			writeShopPage(w, tl(lang, "g_sending"), b.String())
+			return
+		}
+	}
+	b.WriteString(`<p><img src="/icons/` + esc(app.Slug) + `.png" width="64" height="48" style="float:left;margin:0 12px 8px 0;border:0" alt=""><b>` + esc(app.Name) + `</b><br>` + esc(tl(lang, "g_points", "n", strconv.Itoa(price))) + `</p>`)
+	b.WriteString(`<p class="small">` + esc(tl(lang, "g_note")) + `</p>`)
+	b.WriteString(`<form method="post" action="/gift"><input type="hidden" name="csrf" value="` + csrf + `"><input type="hidden" name="titleId" value="` + esc(id) + `">`)
+	b.WriteString(`<p>` + esc(tl(lang, "g_code")) + ` <input name="code" maxlength="14" size="14" value="` + esc(r.FormValue("code")) + `"></p>`)
+	b.WriteString(`<p>` + esc(tl(lang, "g_message")) + ` <input name="message" maxlength="120" size="38" value="` + esc(r.FormValue("message")) + `"></p>`)
+	b.WriteString(`<p>` + uiSubmit("", "", tl(lang, "g_send")) + `</p></form>`)
+	b.WriteString(`</div>` + shopFootT(lang, "/oss/serv/B_05.html?titleId="+id))
+	writeShopPage(w, tl(lang, "g_title"), b.String())
 }
 
 // ---- link the website to this Wii ------------------------------------------
