@@ -46,8 +46,30 @@ if (typeof window.ECommerceInterface === 'undefined' &&
     navigator.userAgent.indexOf('Wii Shop Channel/') === -1 &&
     navigator.userAgent.indexOf('Nintendo Wii') === -1) {
   window.ECommerceInterface = function() {
-    return new ShroombrewECommerceInterface();
+    var base = (typeof window.ec !== 'undefined' && window.ec) ? window.ec : null;
+    if (base) {
+      for (var k in base) {
+        try { this[k] = base[k]; } catch (e) {}
+      }
+    }
+    this.keys = [];
+    this.values = [];
+    this.setSessionValue = function(key, value) {
+      var i = this.keys.indexOf(key);
+      if (i >= 0) this.values[i] = value;
+      else { this.keys.push(key); this.values.push(value); }
+    };
+    this.getSessionValue = function(key) {
+      return this.values[this.keys.indexOf(key)];
+    };
   };
+}
+if (typeof window.wiiSound === 'undefined' &&
+    navigator.userAgent.indexOf('Wii Shop Channel/') === -1 &&
+    navigator.userAgent.indexOf('Nintendo Wii') === -1) {
+  window.wiiSound = function() {};
+  window.wiiSound.prototype.playSE = function() {};
+  window.wiiSound.prototype.playBGM = function() {};
 }
 // History entries kept by the shell are full URLs, so an absolute address must be
 // used as it is; only a bare page name ("B_04.html?p=1") belongs under /oss/serv/.
@@ -216,7 +238,10 @@ function shroomRegisterDevice() {
       // Only mark this launch registered after the server has stored the
       // console->wallet mapping. Navigating away first used to abort the POST
       // and leave the sessions with no wallet cookie.
-      if (x.status !== 200) { window.shroomRegisterStarted = false; return; }
+      if (x.status !== 200 || x.responseText.indexOf('"ok":1') === -1) {
+        window.shroomRegisterStarted = false;
+        return;
+      }
       document.cookie = 'shroombrew_reg=1; path=/'; // session cookie: once per launch
       // The first page of a launch was built before we knew the language; once the
       // server confirms it, redraw this page one time in the right language.

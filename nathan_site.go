@@ -77,6 +77,19 @@ var nintendoShopHosts = []struct {
 
 var nintendoShopHostSuffix = regexp.MustCompile(`([a-z0-9-]+)\.shop\.wii\.com`)
 
+// safeRegistrationNext restricts the JSP "next" value to the two calls the
+// archived registration pages actually use, preventing a crafted POST from
+// injecting arbitrary javascript: into the page.
+func safeRegistrationNext(next string) bool {
+	switch next {
+	case "W_01.html",
+		"javascript:showInitialPage(false, true)",
+		"javascript:showInitialPage(false, false)":
+		return true
+	}
+	return false
+}
+
 // shopBaseDomain returns the domain this deployment answers on. The configured
 // BaseURL wins; otherwise the requested host is used with its service prefix
 // removed, so a stale configuration still keeps the console on this server
@@ -1412,7 +1425,7 @@ func (s *storefront) classicSiteHandler(soap http.Handler) http.Handler {
 			// CheckBalance returns to W_01 instead of stalling.
 			if r.Method == http.MethodPost && (filePath == "/oss/serv/CheckBalance.html" || filePath == "/oss/serv/Register.html") {
 				if r.ParseForm() == nil {
-					if next := r.Form.Get("next"); next != "" {
+					if next := r.Form.Get("next"); safeRegistrationNext(next) {
 						if quoted, err := json.Marshal(next); err == nil {
 							text = strings.Replace(text, "decodeURIComponent('')", string(quoted), 1)
 						}
@@ -1421,21 +1434,6 @@ func (s *storefront) classicSiteHandler(soap http.Handler) http.Handler {
 			}
 			text = strings.ReplaceAll(text, "top_L_arrow_S.png", "top_L_arrow_00.png")
 			text = strings.ReplaceAll(text, "top_R_arrow_S.png", "top_R_arrow_00.png")
-			if filePath == "/oss/serv/index.html" && isWiiClient(r) {
-				// The captured F_01 page had its initPage commented out for the
-				// desktop mock. On a console, drive the native wiiShop object and
-				// continue into CheckRegistered, as the original channel did.
-				text = strings.Replace(text, "</body>", `<script type="text/javascript">
-function initPage(){
-  var shop=new wiiShop();
-  var t=document.getElementById("wiiTitle");if(shop&&t)t.innerHTML=shop.title;
-  var m=document.getElementById("wiiMessage");if(shop&&m)m.innerHTML=shop.connecting;
-  try{if(shop&&"beginWaiting" in shop)shop.beginWaiting();}catch(e){}
-  try{if(shop&&"disableHRP" in shop)shop.disableHRP();}catch(e){}
-  showCheckRegistered();
-}
-</script></body>`, 1)
-			}
 			if strings.HasSuffix(filePath, ".html") {
 				text = strings.Replace(text, "<head>", "<head><script src=\""+compatURL+"\"></script>", 1)
 			}
