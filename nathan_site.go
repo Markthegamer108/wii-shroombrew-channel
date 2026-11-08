@@ -619,6 +619,7 @@ function nav(){
  var cur=section(),hb=value('hb')=='1',t;
  if(value('title'))t='Results for '+value('title');
  else if(hb)t=cur=='Virtual Console'?'Homebrew Emulators':'Homebrew Games';
+ else if(value('genre'))t=value('genre')=='flash'?'Flash':value('genre');
  else if(value('order')=='new')t='Newest Additions';
  else if(value('popular')=='true')t='Popular Titles';
  else if(value('publisher'))t=value('publisher');
@@ -630,29 +631,30 @@ function render(){
  nav();
  var page=parseInt(value('p')||'1',10);if(!page||page<1)page=1;
  var title=value('title').toLowerCase();var genre=value('genre').toLowerCase();var cat=section().toLowerCase();var publisher=value('publisher').toLowerCase();var list=[];var i;
- function matchGenre(g){
-  g=String(g||'').toLowerCase();
-  if(genre){
-   if(genre=='utilities-or-so')return g=='utilities'||g=='media'||g=='demos';
-   if(genre=='games')return g=='games';
-   if(genre=='emulators')return g=='emulators';
-   if(genre=='homebrew-channels')return g=='games'||g=='utilities'||g=='media'||g=='demos';
-   return g==genre;
-  }
-  if(cat){
-   if(cat=='virtual console')return value('hb')=='1'?g=='emulators':g=='virtual console';
-   if(cat=='wiiware'&&value('hb')=='1')return g=='games';
-   if(cat=='wiiware'&&value('genre')=='flash')return g.toLowerCase()=='flash';
-   if(cat=='channels')return g=='channels'||g=='games'||g=='utilities'||g=='media'||g=='demos';
-   if(cat=='wiiware')return g=='wiiware';
-   if(cat=='dlc')return g=='dlc';
-  }
+ // A section lists only its own titles: the MarioCube ones in Virtual
+ // Console/WiiWare/DLC/Wii Channels. Homebrew shows only behind the
+ // Homebrew tile of the VC (emulators) and WiiWare (games) choosers (hb=1).
+ function inSection(g){
+  if(value('hb')=='1')return cat=='virtual console'?g=='emulators':g=='games';
+  if(cat)return g==cat;
   return true;
+ }
+ function matchGenre(game){
+  var g=String(game.genre||'').toLowerCase();
+  if(genre=='flash')return g=='flash';
+  if(!inSection(g))return false;
+  if(!genre)return true;
+  if(genre=='utilities-or-so')return g=='utilities'||g=='media'||g=='demos';
+  if(g==genre)return true;
+  // Licensed titles keep their real genre(s) in displayGenre ("Puzzle, Adventure").
+  var d=String(game.displayGenre||'').toLowerCase().split(/\s*,\s*/);
+  for(var k=0;k<d.length;k++)if(d[k]==genre)return true;
+  return false;
  }
  for(i=1;i<gameslist.length;i++){
   var game=gameslist[i];if(!game||!game.id)continue;
   if(title&&((game.title1||'')+' '+(game.title2||'')+' '+(game.publisher||'')).toLowerCase().indexOf(title)<0)continue;
-  if(!matchGenre(String(game.genre||'')))continue;
+  if(!matchGenre(game))continue;
   if(publisher&&String(game.publisher||'').toLowerCase().indexOf(publisher)<0)continue;
   list.push(game);
  }
