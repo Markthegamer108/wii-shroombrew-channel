@@ -46,7 +46,7 @@
   var openBlocks=parseInt(d.FreeBlocks,10);if(!(openBlocks>=0))openBlocks=2163;
   var afterBlocks=Math.max(openBlocks-needBlocks,0);
   text('blockcost01',openBlocks);text('blockcost02',needBlocks);text('blockcost03',afterBlocks);
-  text('BuyMsg',L('Download this homebrew package for {n} Wii Points.',{n:d.Price}));
+  text('BuyMsg',L(d.Licensed?'Download this software for {n} Wii Points.':'Download this homebrew package for {n} Wii Points.',{n:d.Price}));
   if(d.Balance<d.Price){
    text('confirmationMsg',L('You need more Wii Points.'));
    button('R',L('Add Wii Points'),points);
@@ -139,8 +139,6 @@
    function setStatus(html){if(bigStatus)bigStatus.innerHTML=html;}
    // The original keeps the status line empty until the download succeeds.
    if(bigStatus)bigStatus.style.display='none';
-   // Show the centre OK the moment the download starts; it is the page's own.
-   ['bannershadow','spacerL','bannerL','wordL'].forEach(function(id){var n=el(id);if(n)n.style.display='';});
    var okAnchor=document.getElementById('OKBtnAnchor');
    if(okAnchor){okAnchor.href='#';okAnchor.onclick=function(){try{wiiSelectSound();}catch(e){}go((d.Health&&d.Health!=='')?d.Health:d.Back);return false;};}
    setTimeout(function(){
@@ -152,6 +150,8 @@
      text('rcvHead',L('You downloaded'));
      if(bigStatus){bigStatus.style.display='';bigStatus.style.top='226px';}
      setStatus('<div align="center" class="titleBlueL">'+L('Download successful!')+'</div>');
+     // The centre OK belongs to the success state, not the live download.
+     ['bannershadow','spacerL','bannerL','wordL'].forEach(function(id){var n=el(id);if(n)n.style.display='';});
    },1500);
    return;
   }

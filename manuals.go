@@ -155,6 +155,26 @@ func (s *storefront) manualFile(w http.ResponseWriter, r *http.Request) {
 	rest := strings.TrimPrefix(r.URL.Path, "/manual/")
 	slash := strings.Index(rest, "/")
 	if slash != 16 {
+		// Manual pages load ../../../../js/* from the shop's common JS folder.
+		// Serve the archived helpers; an optional missing index.js gets an empty
+		// ES3 file instead of a noisy 404.
+		rel := path.Clean(rest)
+		if strings.HasPrefix(rel, "js/") && !strings.Contains(rel, "..") {
+			name := path.Base(rel)
+			if name != "" && name != "." && name != "/" {
+				file := filepath.Join(nathanSiteRoot, "oss", "oss", "common", "js", name)
+				if info, err := os.Stat(file); err == nil && !info.IsDir() {
+					w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
+					w.Header().Set("Cache-Control", "no-cache")
+					http.ServeFile(w, r, file)
+					return
+				}
+				w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
+				w.Header().Set("Cache-Control", "no-cache")
+				w.Write([]byte("/* archived manual helper unavailable */\n"))
+				return
+			}
+		}
 		http.NotFound(w, r)
 		return
 	}
@@ -195,7 +215,7 @@ func (s *storefront) manualFile(w http.ResponseWriter, r *http.Request) {
 			if strings.HasSuffix(strings.ToLower(rel), ".html") || strings.HasSuffix(strings.ToLower(rel), ".htm") {
 				// Manuals call the shop's native helpers for their Back button.
 				// The browser viewer supplies small ES3 stand-ins.
-				helper := []byte(`<script type="text/javascript">function wiiCloseManual(){history.back();}function wiiFocusSound(){}function wiiSelectSound(){}function wiiCancelSound(){}function trace(){}var snd={playSE:function(){},playBGM:function(){}};</script>`)
+				helper := []byte(`<script type="text/javascript">var shop=null;function wiiCloseManual(){history.back();}function wiiFocusSound(){}function wiiSelectSound(){}function wiiCancelSound(){}function trace(){}var snd={playSE:function(){},playBGM:function(){}};</script>`)
 				if i := bytes.LastIndex(bytes.ToLower(body), []byte("</body>")); i >= 0 {
 					body = append(append(append([]byte{}, body[:i]...), helper...), body[i:]...)
 				} else {

@@ -39,6 +39,7 @@ var (
 	errAlreadyReferred = &userError{"er_already_ref", "You already entered a friend code."}
 	errInviterFull     = &userError{"er_inviter_full", "That code has reached its reward limit."}
 	errUnknownApp      = &userError{"er_unknown_app", "Unknown app."}
+	errUnavailable     = &userError{"er_unavailable", "That title is not available."}
 	errAlreadyOwned    = &userError{"er_owned", "They already own that app."}
 	errDupGift         = &userError{"er_dup_gift", "A gift for that app is already waiting for them."}
 	errTooManyGifts    = &userError{"er_too_many_gifts", "They have too many gifts waiting."}
@@ -414,6 +415,9 @@ func (s *storefront) sendGift(ctx context.Context, from, toCode, slug, message s
 	app, ok := s.bySlug[slug]
 	if !ok {
 		return "", errUnknownApp
+	}
+	if _, available := s.downloadTarget(app); !available {
+		return "", errUnavailable
 	}
 	code := normalizeFriendCode(toCode)
 	if code == "" {

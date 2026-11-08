@@ -316,6 +316,8 @@ func (s *storefront) checkout(w http.ResponseWriter, r *http.Request, app catalo
 			}
 			recordPurchaseVersion(r.Context(), id, app.Slug, app.Shop.Version)
 			logDownload(r.Context(), app.Slug, "channel")
+			// Native downloads earn the same one-time play reward as PC ones.
+			awardPlayPoints(r.Context(), id, app.Slug)
 			// The next screen asks Wii System Memory or SD Card, like B_09 did.
 			http.Redirect(w, r, "/native-ec/title/"+classicTitleIDForApp(app), http.StatusSeeOther)
 			return
@@ -341,7 +343,7 @@ func (s *storefront) checkout(w http.ResponseWriter, r *http.Request, app catalo
 	if controls == "" {
 		controls = "Controller information not supplied"
 	}
-	data := archivedCheckoutData{Page: "B_08", Name: app.Name, Controllers: controls, ControllerIcons: controllerIcons(app), ControllerExtra: controllerExtra(app), Balance: points, Price: price, Remaining: points - price, CSRF: csrfToken(id), Action: r.URL.Path, Back: "/oss/serv/B_05.html?titleId=" + classicTitleIDForApp(app), Next: r.URL.Path + "?confirm=1"}
+	data := archivedCheckoutData{Page: "B_08", Name: app.Name, Controllers: controls, ControllerIcons: controllerIcons(app), ControllerExtra: controllerExtra(app), Balance: points, Price: price, Remaining: points - price, CSRF: csrfToken(id), Action: r.URL.Path, Back: "/oss/serv/B_05.html?titleId=" + classicTitleIDForApp(app), Next: r.URL.Path + "?confirm=1", Licensed: app.Licensed}
 	if r.URL.Query().Get("confirm") == "1" {
 		data.Page = "B_09"
 		data.Back = r.URL.Path
@@ -449,6 +451,8 @@ func (s *storefront) downloadFlow(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Not enough points or wallet unavailable", 409)
 			return
 		}
+		recordPurchaseVersion(r.Context(), id, app.Slug, app.Shop.Version)
+		awardPlayPoints(r.Context(), id, app.Slug)
 		points, err := walletBalance(id)
 		if err != nil {
 			http.Error(w, "Wallet unavailable", 500)
@@ -517,6 +521,7 @@ func (s *storefront) downloadFlow(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Length", fmt.Sprint(info.Size()))
 		if written, err := io.Copy(w, packageFile); err == nil && written == info.Size() {
 			pool.Exec(r.Context(), `UPDATE shroombrew_purchases SET delivered_at=now() WHERE wallet=$1 AND slug=$2`, id, app.Slug)
+			awardPlayPoints(r.Context(), id, app.Slug)
 		}
 		s.discardJob(job)
 		return

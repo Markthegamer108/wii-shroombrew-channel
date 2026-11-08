@@ -22,9 +22,9 @@ type archivedCheckoutData struct {
 	Health string
 	// ControllerIcons are B_08's controller images (banner/B_08_<key>.gif)
 	// and ControllerExtra its second note; see controllerIcons.
-	ControllerIcons []string
-	ControllerExtra string
-	Balance, Price, Remaining                                                          int
+	ControllerIcons           []string
+	ControllerExtra           string
+	Balance, Price, Remaining int
 	// FSBlocks is the channel's size on the console in 16 KB filesystem blocks;
 	// the confirmation page shows it in 128 KB Wii blocks like the original.
 	FSBlocks                            int
@@ -35,13 +35,16 @@ type archivedCheckoutData struct {
 	// FreeBlocks is the console's open Wii system-memory blocks (2163 by
 	// default). The confirmation page checks it before starting a download.
 	FreeBlocks int
+	// Licensed selects the real-shop "software" wording on B_09 instead of
+	// the homebrew package wording.
+	Licensed bool
 	// Points page: translated strings, the public website address and a
 	// one-line result message (Flash) shown after a card is entered.
 	T        map[string]string
 	D        map[string]string // English -> translated text for the page script
-	Site      string
-	Flash     template.HTML
-	FlashBad  bool
+	Site     string
+	Flash    template.HTML
+	FlashBad bool
 	// Card is the Wii Points card artwork for the console's region.
 	Card string
 	// Add Wii Points screens (points_flow.go): the amount being added or on
@@ -70,10 +73,11 @@ func archivedPointsReturn(r *http.Request) string {
 // script looks text up in this table, so one dictionary translates both.
 var archiveLiterals = map[string]string{
 	"Selection Confirmation": "x_selconf", "Download this homebrew package for {n} Wii Points.": "x_buy",
-	"You need more Wii Points.": "x_need", "Download this software?": "x_confirm", "Delivery:": "x_delivery",
+	"Download this software for {n} Wii Points.": "x_buy_soft",
+	"You need more Wii Points.":                  "x_need", "Download this software?": "x_confirm", "Delivery:": "x_delivery",
 	"Destination:": "x_dest", "Card": "x_card", "Installation:": "x_install", "Manual": "x_manual",
 	"Download": "x_download", "Add Wii Points": "c_title", "Back": "w_back", "Wii Points": "f_points",
-	"Quit": "c_quit",
+	"Quit":                                 "c_quit",
 	"Preparing software for your SD card.": "x_prep", "Your homebrew package is ready.": "x_ready",
 	"Use Shroombrew Installer on your Wii, or": "x_useinst", "download the ZIP instead.": "x_zip",
 	"Install on Wii": "x_inst_wii", "Install to SD Card": "x_inst_sd", "Your install code: {code}": "x_code",
@@ -86,11 +90,11 @@ var archiveLiterals = map[string]string{
 	"This download expired. Return to the shop and prepare it again.": "x_expired",
 	"Download Software": "x_dl_title", "You are downloading": "x_ing", "Wii Points after Download:": "x_pts_after",
 	"Blocks after Download:": "x_blocks_after", "Blocks": "x_blocks",
-	"There is not enough space in the Wii System Memory.": "x_nospace",
+	"There is not enough space in the Wii System Memory.":                                                     "x_nospace",
 	"Please note that Wii Points will not be deducted from your account until the transaction is successful.": "x_note",
 	"Visit support.nintendo.com for assistance.":                                                              "x_support",
 	"You can download this software again without using any Wii Points.":                                      "x_again",
-	"This offer has expired.": "x_offer_exp", "You may no longer download a title for free.": "x_nofree",
+	"This offer has expired.":                                                                                 "x_offer_exp", "You may no longer download a title for free.": "x_nofree",
 	// native (on-console) download flow and the confirmation labels
 	"Waiting for native EC progress...": "n_wait", "Native SD interface unavailable.": "n_nosd",
 	"Insert an SD card before downloading.": "n_insert", "Install this app to SD Card?": "n_q_apps",

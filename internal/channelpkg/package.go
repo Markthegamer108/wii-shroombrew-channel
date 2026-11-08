@@ -23,7 +23,9 @@ type Manifest struct {
 	Kind string `json:"kind,omitempty"`
 }
 
-var TitlePattern = regexp.MustCompile(`(?i)^0001000[0-9a-f][0-9a-f]{8}$`)
+// 00010002 is the system-title range (the Shop Channel itself, for example).
+// Packages here are application/channel titles: 00010000, 00010001, 00010004...
+var TitlePattern = regexp.MustCompile(`(?i)^0001000[013456789a-f][0-9a-f]{8}$`)
 var FilePattern = regexp.MustCompile(`(?i)^(tmd(\.[0-9]{1,5})?|[0-9a-f]{8})$`)
 
 // Import validates every decrypted content before atomically publishing a new package.

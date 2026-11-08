@@ -19,10 +19,12 @@ func TestRepairedFrontendRoutes(t *testing.T) {
 	if _, err := os.Stat("./reference-site"); err != nil {
 		t.Skip("reference-site directory not found")
 	}
-	h := s.handler(http.NotFoundHandler())
+	// Match the production chain: reference site -> feature routes -> classic
+	// shop pages. s.handler alone only covers the homebrew storefront.
+	h := referenceSiteHandler("./reference-site", s.featureHandler(s.classicSiteHandler(s.handler(http.NotFoundHandler()))))
 	// Use Wii UA so "/" serves the shop front page, not the community redirect.
 	wiiUA := "Wii Shop Channel/21.0(N)"
-	for _, path := range []string{"/", "/oss/serv/W_03.html", "/oss/serv/B_04.html", "/oss/serv/B_05.html"} {
+	for _, path := range []string{"/oss/serv/W_03.html", "/oss/serv/B_04.html", "/oss/serv/B_05.html"} {
 		w := httptest.NewRecorder()
 		req := httptest.NewRequest("GET", path, nil)
 		req.Header.Set("User-Agent", wiiUA)
@@ -31,13 +33,23 @@ func TestRepairedFrontendRoutes(t *testing.T) {
 		if w.Code != 200 {
 			t.Fatalf("%s: status %d, body=%q", path, w.Code, body)
 		}
-		// The reference site's W_01/W_03 pages include these markers.
-		if !strings.Contains(body, `shroombrewShopHandle`) && !strings.Contains(body, `shroombrew-welcome.js`) && !strings.Contains(body, `shroombrew-navigation.js`) {
+		// Each archived page gets at least one of the Shroombrew adapters.
+		if !strings.Contains(body, `shroombrewShopHandle`) && !strings.Contains(body, `shroombrew-welcome.js`) &&
+			!strings.Contains(body, `shroombrew-navigation.js`) && !strings.Contains(body, `shroombrew-catalog.js`) &&
+			!strings.Contains(body, `shroombrew-detail.js`) {
 			t.Fatalf("%s: reference site scripts missing, body[:500]=%q", path, body[:500])
 		}
 		if path == "/oss/serv/B_04.html" && (strings.Contains(w.Body.String(), "games.filter(e=>e)") || strings.Contains(w.Body.String(), "const urlParams = new URLSearchParams")) {
 			t.Fatal("incompatible catalog renderer still served")
 		}
+	}
+	// A Wii starts at the connecting screen, not directly on the shop front page.
+	start := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/", nil)
+	req.Header.Set("User-Agent", wiiUA)
+	h.ServeHTTP(start, req)
+	if start.Code != 200 || !strings.Contains(start.Body.String(), "Connecting. Please wait...") {
+		t.Fatalf("startup: status %d, body=%q", start.Code, start.Body.String())
 	}
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, httptest.NewRequest("GET", "/download/demo", nil))

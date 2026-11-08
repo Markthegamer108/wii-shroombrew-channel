@@ -299,6 +299,11 @@ func (s *storefront) giftPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	app = s.regionApp(app, r)
+	if _, ok := s.downloadTarget(app); !ok {
+		content := `<div class="panel"><p>` + html.EscapeString(tl(lang, "g_unavailable")) + `</p></div>` + shopFootT(lang, "/oss/serv/B_05.html?titleId="+id)
+		writeShopPage(w, tl(lang, "g_title"), content)
+		return
+	}
 	price := classicPriceFor(app)
 	csrf := csrfToken(wallet)
 	esc := html.EscapeString

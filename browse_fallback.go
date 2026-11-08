@@ -10,6 +10,9 @@ func classicBrowseJS() []byte {
 var retries=0;
 function value(name){var q=location.search.substring(1).split('&');for(var i=0;i<q.length;i++){var p=q[i].split('=');if(decodeURIComponent(p[0])==name)return decodeURIComponent((p[1]||'').replace(/\+/g,' '));}return '';}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+// encodeURIComponent leaves apostrophes alone, which would break the
+// javascript:showPage('...') link used by the banner.
+function enc(s){return encodeURIComponent(s).replace(/'/g,'%27');}
 function section(){
  var c=value('category');if(c)return c;
  if(value('vc')=='true')return 'Virtual Console';
@@ -70,13 +73,13 @@ function render(){
     '<div id="word0'+(i+1)+'" style="position:absolute;left:6px;top:6px;width:223px;height:22px;z-index:6;overflow:hidden;" align="center"><table height="100%"><tr><td align="left" valign="middle"><span class="contentsBlack">'+esc(v)+'</span></td></tr></table></div>'+
     '<div id="hit0'+(i+1)+'-01" style="position:absolute;left:114px;top:31px;width:84px;height:16px;z-index:6;"><table width="100%" height="100%"><tr><td align="right" valign="top"><span class="contentsBlack">Titles:</span></td></tr></table></div>'+
     '<div id="hit0'+(i+1)+'-02" style="position:absolute;left:198px;top:31px;width:31px;height:16px;z-index:6;"><table width="100%" height="100%"><tr><td align="right" valign="top"><span class="contentsBlack">'+count+'</span></td></tr></table></div>'+
-    '<div id="spacer0'+(i+1)+'" style="position:absolute;left:0;top:0;width:235px;height:55px;z-index:7;"><a href="javascript:showPage(\'B_04.html'+q+'&p=1&publisher='+encodeURIComponent(v)+'\')"><img src="/oss/oss/common/images//spacer.gif" name="Image0'+(i+1)+'s" width="235" height="55" border="0" id="Image0'+(i+1)+'s" onmouseover="MM_swapImage(\'Image0'+(i+1)+'\',\'\',\'/oss/oss/common/images//banner/B_17_publisher_a_01.png\',1);snd.playSE(cSE_Forcus);" onmouseout="MM_swapImgRestore();" onclick="snd.playSE(cSE_Decide);" /></a></div></div>';
+    '<div id="spacer0'+(i+1)+'" style="position:absolute;left:0;top:0;width:235px;height:55px;z-index:7;"><a href="javascript:showPage(\'B_04.html'+q+'&p=1&publisher='+enc(v)+'\')"><img src="/oss/oss/common/images//spacer.gif" name="Image0'+(i+1)+'s" width="235" height="55" border="0" id="Image0'+(i+1)+'s" onmouseover="MM_swapImage(\'Image0'+(i+1)+'\',\'\',\'/oss/oss/common/images//banner/B_17_publisher_a_01.png\',1);snd.playSE(cSE_Forcus);" onmouseout="MM_swapImgRestore();" onclick="snd.playSE(cSE_Decide);" /></a></div></div>';
   }else{
    html+='<div id="banner0'+(i+1)+'" style="position:absolute;left:'+((i%2)*244)+'px;top:'+(1+Math.floor(i/2)*92)+'px;width:244px;height:91px;z-index:5;"><img src="/oss/oss/common/images//banner/B_04_half_genre_a.png" width="244" height="91" id="Image0'+(i+1)+'" /></div>'+
     '<div id="word0'+(i+1)+'" style="position:absolute;left:'+(15+(i%2)*244)+'px;top:'+(6+Math.floor(i/2)*92)+'px;width:212px;height:52px;z-index:6;" align="center"><table height="100%"><tr><td align="left" valign="middle"><span class="catalogTitleBlack">'+esc(v)+'</span></td></tr></table></div>'+
     '<div id="hit0'+(i+1)+'-01" style="position:absolute;left:'+(114+(i%2)*244)+'px;top:'+(60+Math.floor(i/2)*92)+'px;width:84px;height:16px;z-index:6;"><table width="100%" height="100%"><tr><td align="right" valign="top"><span class="contentsBlack">Titles:</span></td></tr></table></div>'+
     '<div id="hit'+(i+1)+'-02" style="position:absolute;left:'+(198+(i%2)*244)+'px;top:'+(60+Math.floor(i/2)*92)+'px;width:27px;height:16px;z-index:6;"><table width="100%" height="100%"><tr><td align="right" valign="top"><span class="contentsBlack">'+count+'</span></td></tr></table></div>'+
-    '<div id="spacer0'+(i+1)+'" style="position:absolute;left:'+((i%2)*244)+'px;top:'+(1+Math.floor(i/2)*92)+'px;width:244px;height:91px;z-index:7;"><a href="javascript:showPage(\'B_04.html'+q+'&p=1&genre='+encodeURIComponent(v)+'\')"><img src="/oss/oss/common/images//spacer.gif" name="Image0'+(i+1)+'s" width="244" height="91" border="0" id="Image0'+(i+1)+'s" onmouseover="MM_swapImage(\'Image0'+(i+1)+'\',\'\',\'/oss/oss/common/images//banner/B_04_half_genre_b.png\',1);snd.playSE(cSE_Forcus);" onmouseout="MM_swapImgRestore();" onclick="snd.playSE(cSE_Decide);" /></a></div>';
+    '<div id="spacer0'+(i+1)+'" style="position:absolute;left:'+((i%2)*244)+'px;top:'+(1+Math.floor(i/2)*92)+'px;width:244px;height:91px;z-index:7;"><a href="javascript:showPage(\'B_04.html'+q+'&p=1&genre='+enc(v)+'\')"><img src="/oss/oss/common/images//spacer.gif" name="Image0'+(i+1)+'s" width="244" height="91" border="0" id="Image0'+(i+1)+'s" onmouseover="MM_swapImage(\'Image0'+(i+1)+'\',\'\',\'/oss/oss/common/images//banner/B_04_half_genre_b.png\',1);snd.playSE(cSE_Forcus);" onmouseout="MM_swapImgRestore();" onclick="snd.playSE(cSE_Decide);" /></a></div>';
   }
  }
  box.innerHTML=html;

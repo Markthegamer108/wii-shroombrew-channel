@@ -28,7 +28,18 @@ import (
 	"time"
 )
 
-const nathanSiteRoot = "./site"
+// nathanSiteRoot is ./site in production. Go tests run from server-src, where
+// the site tree is one directory up; fall back to it so the same handlers can
+// be exercised without a temporary copy.
+var nathanSiteRoot = func() string {
+	if info, err := os.Stat("./site"); err == nil && info.IsDir() {
+		return "./site"
+	}
+	if info, err := os.Stat("../site"); err == nil && info.IsDir() {
+		return "../site"
+	}
+	return "./site"
+}()
 
 // Imported frontend sources used by Shroombrew. Nathan's site provides the
 // browser shell directly reused and adapted in site/, while the Internet Archive backup provides
@@ -410,7 +421,7 @@ func classicTitleFor(app catalogApp) classicTitle {
 		Thumbnail: "/icons/" + app.Slug + ".png", Description: app.Description.Short,
 		IsNew:        app.Added > 0 && time.Since(time.Unix(app.Added, 0)) < 30*24*time.Hour,
 		Demo:         isDemoApp(app),
-		NotAvailable: app.Licensed && strings.TrimSpace(app.URL.Zip) == "",
+		NotAvailable: app.Licensed && catalogDownloadURL(app) == "",
 		TitleVersion: app.Shop.Version,
 	}
 }
@@ -1045,12 +1056,27 @@ func (s *storefront) serveShopIcon(w http.ResponseWriter, r *http.Request, slug 
 // downloadTarget returns the redirect URL for a title's WAD/package download.
 // Licensed games are fetched directly from their external host (mariocube);
 // homebrew uses the Open Shop Channel package mirror.
+// catalogDownloadURL returns the WAD URL for a licensed title. Some catalogue
+// rows keep the URL only on the variant matching the primary title ID.
+func catalogDownloadURL(app catalogApp) string {
+	if strings.TrimSpace(app.URL.Zip) != "" {
+		return app.URL.Zip
+	}
+	for _, v := range app.Variants {
+		if v.TitleID == app.Shop.TitleId && strings.TrimSpace(v.Zip) != "" {
+			return v.Zip
+		}
+	}
+	return ""
+}
+
 func (s *storefront) downloadTarget(app catalogApp) (string, bool) {
 	if app.Licensed {
-		if strings.TrimSpace(app.URL.Zip) == "" {
+		u := catalogDownloadURL(app)
+		if u == "" {
 			return "", false
 		}
-		return app.URL.Zip, true
+		return u, true
 	}
 	u, err := url.Parse(app.URL.Zip)
 	if err != nil || u.Scheme != "https" || u.Host != "hbb1.oscwii.org" || u.User != nil || !strings.HasPrefix(u.Path, "/api/contents/") {
@@ -1339,6 +1365,14 @@ func (s *storefront) classicSiteHandler(soap http.Handler) http.Handler {
 			return
 		}
 		localPath := filepath.Join(nathanSiteRoot, filepath.FromSlash(strings.TrimPrefix(filePath, "/")))
+		if st, statErr := os.Stat(localPath); (statErr != nil || st.IsDir()) && strings.HasSuffix(filePath, ".html") {
+			// The archive stores pages as B_04, B_05, ...; a request for
+			// B_04.html should find the same page even when no .html copy exists.
+			alt := filepath.Join(nathanSiteRoot, filepath.FromSlash(strings.TrimSuffix(strings.TrimPrefix(filePath, "/"), ".html")))
+			if ai, aerr := os.Stat(alt); aerr == nil && !ai.IsDir() {
+				localPath = alt
+			}
+		}
 		info, err := os.Stat(localPath)
 		if err != nil || info.IsDir() {
 			http.NotFound(w, r)
@@ -1393,7 +1427,12 @@ func (s *storefront) classicSiteHandler(soap http.Handler) http.Handler {
 				// captured W_01 page has none, so they vanished as soon as the shop
 				// opened. Put the same rules back on the first shop page.
 				dots := `<div class="dot" id="line01">` + shellDots + `</div><div class="dot" id="line02">` + shellDots + `</div>`
-				text = strings.Replace(text, "</body>", dots+"<script type=\"text/javascript\" src=\"/shroombrew-welcome.js\"></script></body>", 1)
+				script := `<script type="text/javascript" src="/shroombrew-welcome.js"></script>`
+				if !strings.Contains(text, `id="line01"`) {
+					text = strings.Replace(text, "</body>", dots+script+"</body>", 1)
+				} else {
+					text = strings.Replace(text, "</body>", script+"</body>", 1)
+				}
 			}
 			if strings.HasPrefix(filePath, "/oss/serv/") && strings.HasSuffix(filePath, ".html") {
 				// Keep the two rules on every normal shop page, including pages
@@ -1420,6 +1459,13 @@ func (s *storefront) classicSiteHandler(soap http.Handler) http.Handler {
 				if id := strings.ToUpper(r.URL.Query().Get("titleId")); id != "" {
 					text = strings.Replace(text, `<iframe src=""`, `<iframe src="/rating?titleId=`+url.QueryEscape(id)+`"`, 1)
 				}
+			}
+			if filePath == "/oss/serv/M_01.html" {
+				// M_01 is the orphaned captured manual viewer. It hardcodes a
+				// demo title; point it at the real manual archive for whatever
+				// titleId was requested.
+				text = strings.Replace(text, "<title>M_01.title</title>", "<title>Operations Guide</title>", 1)
+				text = strings.Replace(text, "</body>", `<script type="text/javascript">function initPage(){var f=document.getElementById('manframe');if(f){f.src=location.search&&location.search.length>1?'/manual'+location.search:'/oss/serv/W_03.html';}if(typeof setUnderButtonL=='function')setUnderButtonL(true,'Back','javascript:showBack()','wiiCancelSound()');}</script></body>`, 1)
 			}
 			if strings.Contains(r.UserAgent(), "Wii Shop Channel/") || strings.Contains(r.UserAgent(), "Nintendo Wii") {
 				text = legacyWiiFrontend(text)

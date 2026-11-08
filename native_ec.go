@@ -89,8 +89,18 @@ func (s *storefront) nativeECHandler(next http.Handler) http.Handler {
 				break
 			}
 		}
+		if app == nil {
+			// A system title (00010002...) is not a catalogue page at all; a
+			// catalogue-prefix title with no matching package is a conflict.
+			if strings.HasPrefix(id, "00010002") {
+				http.NotFound(w, r)
+				return
+			}
+			http.Error(w, "A matching native channel package is required", http.StatusConflict)
+			return
+		}
 		manifest, err := channelpkg.Load(s.channelsRoot, strings.ToLower(id))
-		if err != nil || app == nil || !channelPackageMatches(*app, manifest) {
+		if err != nil || !channelPackageMatches(*app, manifest) {
 			http.Error(w, "A matching native channel package is required", http.StatusConflict)
 			return
 		}
