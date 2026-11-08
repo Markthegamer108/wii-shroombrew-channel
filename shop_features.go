@@ -223,6 +223,19 @@ func rewriteSiteRoute(w http.ResponseWriter, r *http.Request) bool {
 
 func shopLink(url, text string) string { return uiButton(url, text) }
 
+// healthSafetyURL points a finished game download at B_13 and carries the
+// title page to return to after the warning. Channels and homebrew skip it,
+// as the original shop did.
+func healthSafetyURL(app catalogApp) string {
+	switch app.Category {
+	case "Virtual Console", "WiiWare", "DLC":
+		id := classicTitleIDForApp(app)
+		back := "/oss/serv/B_05.html?titleId=" + id
+		return "/oss/serv/B_13.html?titleId=" + id + "&back=" + url.QueryEscape(back)
+	}
+	return ""
+}
+
 func (s *storefront) checkout(w http.ResponseWriter, r *http.Request, app catalogApp) {
 	id, err := walletID(w, r)
 	if err != nil {
@@ -269,7 +282,7 @@ func (s *storefront) checkout(w http.ResponseWriter, r *http.Request, app catalo
 				http.Error(w, "Wallet unavailable", 500)
 				return
 			}
-			writeArchivedCheckout(w, r, archivedCheckoutData{Page: "B_10", Mode: "pc", Name: app.Name, Balance: points, Action: "/download-file/" + app.Slug, FSBlocks: s.channelFSBlocks(app), Back: "/oss/serv/W_03.html"})
+			writeArchivedCheckout(w, r, archivedCheckoutData{Page: "B_10", Mode: "pc", Name: app.Name, Balance: points, Action: "/download-file/" + app.Slug, FSBlocks: s.channelFSBlocks(app), Back: "/oss/serv/B_05.html?titleId=" + classicTitleIDForApp(app), Health: healthSafetyURL(app), TitleID: classicTitleIDForApp(app), TitleVersion: app.Shop.Version})
 			return
 		}
 		// Apps that fit a channel are downloaded by the Shop's own native
@@ -425,7 +438,7 @@ func (s *storefront) downloadFlow(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Wallet unavailable", 500)
 			return
 		}
-		writeArchivedCheckout(w, r, archivedCheckoutData{Page: "B_10", Mode: "installer", Code: job.Code, Name: app.Name, Balance: points, Back: "/wii-install/title/" + classicTitleIDForApp(app), Job: job.ID})
+		writeArchivedCheckout(w, r, archivedCheckoutData{Page: "B_10", Mode: "installer", Code: job.Code, Name: app.Name, Balance: points, Back: "/oss/serv/B_05.html?titleId=" + classicTitleIDForApp(app), Health: healthSafetyURL(app), Job: job.ID})
 		return
 	}
 	if parts[0] == "zip" && r.Method == http.MethodPost {
@@ -501,7 +514,7 @@ func (s *storefront) downloadFlow(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Wallet unavailable", 500)
 		return
 	}
-	writeArchivedCheckout(w, r, archivedCheckoutData{Page: "B_10", Name: app.Name, Balance: points, CSRF: csrfToken(id), Action: "/shop-download/zip/" + job.ID, Back: "/wii-install/title/" + classicTitleIDForApp(app), Job: job.ID, State: state})
+	writeArchivedCheckout(w, r, archivedCheckoutData{Page: "B_10", Name: app.Name, Balance: points, CSRF: csrfToken(id), Action: "/shop-download/zip/" + job.ID, Back: "/oss/serv/B_05.html?titleId=" + classicTitleIDForApp(app), Health: healthSafetyURL(app), Job: job.ID, State: state})
 }
 
 func purchaseOnce(ctx context.Context, wallet, slug string, price int) error {

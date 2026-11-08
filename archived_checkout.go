@@ -17,6 +17,9 @@ var archivedShopTemplates = template.Must(template.ParseFS(archivedShopFiles, "s
 
 type archivedCheckoutData struct {
 	Page, Name, Controllers, CSRF, Action, Back, Next, Job, State, Message, Code, Mode string
+	// Health is the B_13 Health & Safety page shown after a game download;
+	// channels skip it and return straight to Back.
+	Health string
 	// ControllerIcons are B_08's controller images (banner/B_08_<key>.gif)
 	// and ControllerExtra its second note; see controllerIcons.
 	ControllerIcons []string
@@ -26,6 +29,9 @@ type archivedCheckoutData struct {
 	// the confirmation page shows it in 128 KB Wii blocks like the original.
 	FSBlocks                            int
 	TitleID, Destination, ServiceDomain string
+	// TitleVersion is remembered in the browser when a PC download completes so
+	// the title detail page can show Downloaded/Updated on return.
+	TitleVersion int
 	// Points page: translated strings, the public website address and a
 	// one-line result message (Flash) shown after a card is entered.
 	T        map[string]string

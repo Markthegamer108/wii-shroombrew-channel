@@ -123,6 +123,7 @@
    if(note)note.style.display='none';
    show('underButtonL',false);
    show('details',true);
+   if(d.TitleID){try{sessionStorage.setItem('shroomInstalled_'+d.TitleID,''+ (d.TitleVersion||0));}catch(e){}}
    text('rcvHead',L('You are downloading'));
    text('pointCost',String(d.Balance||0));
    text('blockCost',String(Math.ceil((d.FSBlocks||0)/8)));
@@ -133,7 +134,7 @@
    // Show the centre OK the moment the download starts; it is the page's own.
    ['bannershadow','spacerL','bannerL','wordL'].forEach(function(id){var n=el(id);if(n)n.style.display='';});
    var okAnchor=document.getElementById('OKBtnAnchor');
-   if(okAnchor){okAnchor.href='#';okAnchor.onclick=function(){try{wiiSelectSound();}catch(e){}go(d.Back);return false;};}
+   if(okAnchor){okAnchor.href='#';okAnchor.onclick=function(){try{wiiSelectSound();}catch(e){}go((d.Health&&d.Health!=='')?d.Health:d.Back);return false;};}
    setTimeout(function(){
      if(animation)animation.stop();
      var f=document.createElement('iframe');f.style.display='none';f.src=d.Action;document.body.appendChild(f);

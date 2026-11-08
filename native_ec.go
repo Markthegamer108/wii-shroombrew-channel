@@ -107,6 +107,6 @@ func (s *storefront) nativeECHandler(next http.Handler) http.Handler {
 			http.Error(w, "Choose nand or sd", http.StatusBadRequest)
 			return
 		}
-		writeArchivedCheckout(w, r, archivedCheckoutData{Page: "B_10", Mode: "native", Name: app.Name, Back: "/native-ec/", TitleID: id, Destination: destination, ServiceDomain: shopBaseDomain(r.Host)})
+		writeArchivedCheckout(w, r, archivedCheckoutData{Page: "B_10", Mode: "native", Name: app.Name, Back: "/oss/serv/B_05.html?titleId=" + classicTitleIDForApp(*app), Health: healthSafetyURL(*app), TitleID: id, Destination: destination, ServiceDomain: shopBaseDomain(r.Host)})
 	})
 }

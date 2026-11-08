@@ -127,6 +127,6 @@ function ShroombrewNativeDownload(d) {
   }
   line(L('Download complete.'));text('nativeBytes',L(d.Destination==='sd'?'Installed to the SD Card Menu.':'Installed to Wii System Memory.'));
   node('nativeFill').style.width='100%';
-  button('R','OK',function(){location.href=d.Back;});
+  button('R','OK',function(){location.href=(d.Health&&d.Health!=='')?d.Health:d.Back;});
  }
 }
