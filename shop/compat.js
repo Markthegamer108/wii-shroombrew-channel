@@ -195,6 +195,8 @@ function shroomRegisterDevice() {
   try {
     if (navigator.userAgent.indexOf('Wii Shop Channel/') === -1 && !shroomNativeAPI.ec) return;
     if (document.cookie.indexOf('shroombrew_reg=1') !== -1) return;
+    if (window.shroomRegisterStarted) return;
+    window.shroomRegisterStarted = true;
     var Ctor = shroomNativeAPI.ec;
     var ecObj = null;
     try { if (typeof ec !== 'undefined' && ec && ec.getDeviceInfo) ecObj = ec; } catch (e0) {}
@@ -206,15 +208,19 @@ function shroomRegisterDevice() {
     var body = 'd=' + encodeURIComponent(f('deviceId')) + '&s=' + encodeURIComponent(f('serial')) +
       '&w=' + encodeURIComponent(f('wirelessMACAddr')) + '&b=' + encodeURIComponent(f('bluetoothMACAddr')) +
       '&l=' + encodeURIComponent(f('language')) + '&c=' + encodeURIComponent(f('country')) + '&r=' + encodeURIComponent(f('region'));
-    document.cookie = 'shroombrew_reg=1; path=/'; // session cookie: once per launch
     var x = new XMLHttpRequest();
     x.open('POST', '/device/register', true);
     x.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
     x.onreadystatechange = function () {
       if (x.readyState !== 4) return;
+      // Only mark this launch registered after the server has stored the
+      // console->wallet mapping. Navigating away first used to abort the POST
+      // and leave the sessions with no wallet cookie.
+      if (x.status !== 200) { window.shroomRegisterStarted = false; return; }
+      document.cookie = 'shroombrew_reg=1; path=/'; // session cookie: once per launch
       // The first page of a launch was built before we knew the language; once the
       // server confirms it, redraw this page one time in the right language.
-      if (x.status === 200 && x.responseText.indexOf('"changed":true') !== -1 && document.cookie.indexOf('shroombrew_rl=1') === -1) {
+      if (x.responseText.indexOf('"changed":true') !== -1 && document.cookie.indexOf('shroombrew_rl=1') === -1) {
         document.cookie = 'shroombrew_rl=1; path=/';
         location.reload();
         return;
