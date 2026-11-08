@@ -40,7 +40,11 @@ if (shroomNativeClient && typeof wiiShop !== 'undefined') {
   try { shroomNativeHandle = new wiiShop(); } catch (e) {}
   setInterval(function() { try { if (shroomNativeHandle) { var waiting = shroomNativeHandle.connecting; } } catch(e) {} }, 30000);
 }
-if (typeof window.ECommerceInterface === 'undefined') {
+// Never install the desktop EC shim on a console: the channel provides the
+// native ECommerceInterface before the page loads.
+if (typeof window.ECommerceInterface === 'undefined' &&
+    navigator.userAgent.indexOf('Wii Shop Channel/') === -1 &&
+    navigator.userAgent.indexOf('Nintendo Wii') === -1) {
   window.ECommerceInterface = function() {
     return new ShroombrewECommerceInterface();
   };
@@ -53,6 +57,10 @@ function shroomResolve(url) {
 }
 function shroomNavigate(url) {
   if (!url) return;
+  if (/^javascript:/i.test(url)) {
+    try { window.eval(url.substring(11)); } catch (e) {}
+    return;
+  }
   if (parent !== window && typeof parent.shroomGoto === 'function') {
     parent.shroomGoto(url);
   } else {

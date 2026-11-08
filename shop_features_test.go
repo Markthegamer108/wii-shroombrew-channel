@@ -69,7 +69,7 @@ func TestRepairedFrontendRoutes(t *testing.T) {
 		code       int
 		text       string
 	}{
-		{"oss-auth.wiirw.bot.nu", "/startup", 200, "Connecting. Please wait..."},
+		{"oss-auth.wiirw.bot.nu", "/startup", 302, ""},
 		{"shop.shroombrew.org", "/startup", 303, ""},
 		{"oss-auth.wiirw.bot.nu", "/oss/getLog", 200, ""},
 	} {
@@ -91,6 +91,23 @@ func TestRepairedFrontendRoutes(t *testing.T) {
 	h.ServeHTTP(w, r)
 	if w.Code != http.StatusFound || !strings.HasPrefix(w.Header().Get("Location"), "/manual?titleId=") {
 		t.Fatalf("manual launch: %d %q", w.Code, w.Header().Get("Location"))
+	}
+	// The native registration chain must be complete for ECS to issue a token.
+	for _, path := range []string{"/oss/serv/CheckRegistered.html", "/oss/serv/L_03.html", "/oss/serv/Register.html", "/oss/serv/CheckBalance.html"} {
+		w = httptest.NewRecorder()
+		r := httptest.NewRequest("GET", path, nil)
+		r.Header.Set("User-Agent", wiiUA)
+		h.ServeHTTP(w, r)
+		if w.Code != 200 {
+			t.Fatalf("%s: status %d", path, w.Code)
+		}
+	}
+	w = httptest.NewRecorder()
+	r = httptest.NewRequest("GET", "/oss/serv/CheckRegistered.html", nil)
+	r.Header.Set("User-Agent", wiiUA)
+	h.ServeHTTP(w, r)
+	if !strings.Contains(w.Body.String(), "Connecting") {
+		t.Fatal("CheckRegistered page lost its connecting screen")
 	}
 	// The WAD install page is public and names the patched download.
 	w = httptest.NewRecorder()

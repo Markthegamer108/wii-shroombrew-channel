@@ -108,7 +108,16 @@ func shopServiceHosts(text, domain string) string {
 		text = strings.ReplaceAll(text, entry.host, entry.service+"."+domain)
 	}
 	text = nintendoShopHostSuffix.ReplaceAllString(text, "${1}."+domain)
-	return strings.ReplaceAll(text, "shop.wii.com", domain)
+	text = strings.ReplaceAll(text, "shop.wii.com", domain)
+	// The archived registration pages were captured from the reference site
+	// and keep its a.taur.cloud URLs. Point them at this deployment and drop
+	// the reference server's /oss prefix from the SOAP/content paths.
+	text = strings.ReplaceAll(text, "a.taur.cloud", domain)
+	text = strings.ReplaceAll(text, "ccs.blinklab.com", "ccs."+domain)
+	for _, service := range []string{"ecs", "ias", "ccs", "cas", "nus"} {
+		text = strings.ReplaceAll(text, "/oss/"+service+"/", "/"+service+"/")
+	}
+	return text
 }
 
 type classicTitle struct {
@@ -1119,19 +1128,6 @@ func (s *storefront) classicSiteHandler(soap http.Handler) http.Handler {
 			soap.ServeHTTP(w, r)
 			return
 		}
-		// The archived registration pages rely on the channel's old registration
-		// HTML (L_03/Register/CheckBalance) which we do not ship. The Shroombrew
-		// connecting page performs the same device registration and then opens
-		// W_01, so send the console there instead of a 404.
-		if isWiiShopUA(r) {
-			switch strings.ToLower(path.Clean(r.URL.Path)) {
-			case "/oss/serv/l_03.jsp", "/oss/serv/l_03.html", "/oss/serv/register.jsp",
-				"/oss/serv/register.html", "/oss/serv/checkbalance.jsp",
-				"/oss/serv/checkregistered.jsp", "/oss/serv/checkregistered.html":
-				http.Redirect(w, r, "/startup", http.StatusFound)
-				return
-			}
-		}
 		if strings.HasPrefix(r.URL.Path, "/shop/") {
 			http.StripPrefix("/shop/", http.FileServer(http.FS(shopAssets))).ServeHTTP(w, r)
 			return
@@ -1192,7 +1188,16 @@ func (s *storefront) classicSiteHandler(soap http.Handler) http.Handler {
 			http.ServeFile(w, r, "./downloads/Shroombrew-install-sd.exe")
 			return
 		}
-		if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		registrationPost := r.Method == http.MethodPost && func() bool {
+			p := strings.ToLower(path.Clean(r.URL.Path))
+			switch p {
+			case "/oss/serv/register.jsp", "/oss/serv/register.html",
+				"/oss/serv/checkbalance.jsp", "/oss/serv/checkbalance.html":
+				return true
+			}
+			return false
+		}()
+		if r.Method != http.MethodGet && r.Method != http.MethodHead && !registrationPost {
 			w.Header().Set("Allow", "GET, HEAD")
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
@@ -1402,6 +1407,18 @@ func (s *storefront) classicSiteHandler(soap http.Handler) http.Handler {
 			text = strings.ReplaceAll(text, "http://wiishopchannel.net", "")
 			text = strings.ReplaceAll(text, "http://wiishopchannel.neocities.org", "")
 			text = shopServiceHosts(text, shopBaseDomain(r.Host))
+			// The archived registration pages are JSP: the original server filled
+			// their hidden "next" field into the page. Preserve that behaviour so
+			// CheckBalance returns to W_01 instead of stalling.
+			if r.Method == http.MethodPost && (filePath == "/oss/serv/CheckBalance.html" || filePath == "/oss/serv/Register.html") {
+				if r.ParseForm() == nil {
+					if next := r.Form.Get("next"); next != "" {
+						if quoted, err := json.Marshal(next); err == nil {
+							text = strings.Replace(text, "decodeURIComponent('')", string(quoted), 1)
+						}
+					}
+				}
+			}
 			text = strings.ReplaceAll(text, "top_L_arrow_S.png", "top_L_arrow_00.png")
 			text = strings.ReplaceAll(text, "top_R_arrow_S.png", "top_R_arrow_00.png")
 			if strings.HasSuffix(filePath, ".html") {

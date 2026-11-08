@@ -30,7 +30,18 @@ import (
 	"os"
 	"slices"
 	"strconv"
+	"strings"
 )
+
+// registrationCountry returns the console's own country. The upstream server
+// hard-coded "DE", which made US/JP consoles see an account-country mismatch
+// and loop back to the country-change page after registering.
+func registrationCountry(e *Envelope) string {
+	if c := strings.TrimSpace(e.Country()); c != "" {
+		return c
+	}
+	return "US"
+}
 
 const (
 	PrepareUserStatement = `INSERT INTO userbase
@@ -65,7 +76,7 @@ func checkRegistration(e *Envelope) {
 	// The console fills ECDeviceInfo.accountCountry and extAccountId from this
 	// reply. Without them a registered console can still report "device is not
 	// registered" (-4042) when a purchase starts.
-	e.AddKVNode("Country", "DE")
+	e.AddKVNode("Country", registrationCountry(e))
 	e.AddKVNode("ExtAccountId", "")
 
 	if err != nil {
@@ -161,7 +172,7 @@ func syncRegistration(e *Envelope) {
 	// Shroombrew currently serves the German catalog and account state.  Returning
 	// a different echoed country makes the original Shop client show its country
 	// migration screen before it can reach the storefront.
-	e.AddKVNode("Country", "DE")
+	e.AddKVNode("Country", registrationCountry(e))
 	e.AddKVNode("ExtAccountId", "")
 	e.AddKVNode("DeviceStatus", "R")
 }
@@ -228,7 +239,7 @@ func register(e *Envelope) {
 					e.AddKVNode("AccountId", strconv.FormatInt(existingAccount, 10))
 					e.AddKVNode("DeviceToken", existingToken)
 					e.AddKVNode("DeviceTokenExpired", "false")
-					e.AddKVNode("Country", "DE")
+					e.AddKVNode("Country", registrationCountry(e))
 					e.AddKVNode("ExtAccountId", "")
 					e.AddKVNode("DeviceCode", deviceCode)
 					return
@@ -247,7 +258,7 @@ func register(e *Envelope) {
 	e.AddKVNode("DeviceToken", deviceToken)
 	e.AddKVNode("DeviceTokenExpired", "false")
 	// Keep existing accounts on the same country as new registrations.
-	e.AddKVNode("Country", "DE")
+	e.AddKVNode("Country", registrationCountry(e))
 	// Optionally, one can send back DeviceCode and ExtAccountId to update on device.
 	// We send these back as-is regardless.
 	e.AddKVNode("ExtAccountId", "")

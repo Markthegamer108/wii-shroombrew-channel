@@ -157,6 +157,14 @@ func (s *storefront) featureHandler(next http.Handler) http.Handler {
 			w.Header().Set("Cache-Control", "no-store")
 			w.WriteHeader(http.StatusOK)
 			return
+		case (r.URL.Path == "/" || r.URL.Path == "/startup") && r.Method == http.MethodGet &&
+			isWiiShopUA(r) && isWSCShopHost(r.Host):
+			// Use the channel's real registration chain: CheckRegistered calls
+			// ec.checkRegistration/ec.register, which creates the IAS DeviceToken
+			// that ECS purchases require. The custom connecting page is only for
+			// the direct native-EC development host.
+			http.Redirect(w, r, "/oss/serv/CheckRegistered.html", http.StatusFound)
+			return
 		case (r.URL.Path == "/" || r.URL.Path == "/startup") && r.Method == http.MethodGet && isWiiShopUA(r):
 			s.connectingPage(w, r)
 		case r.URL.Path == "/language":
