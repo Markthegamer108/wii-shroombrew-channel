@@ -32,6 +32,9 @@ type archivedCheckoutData struct {
 	// TitleVersion is remembered in the browser when a PC download completes so
 	// the title detail page can show Downloaded/Updated on return.
 	TitleVersion int
+	// FreeBlocks is the console's open Wii system-memory blocks (2163 by
+	// default). The confirmation page checks it before starting a download.
+	FreeBlocks int
 	// Points page: translated strings, the public website address and a
 	// one-line result message (Flash) shown after a card is entered.
 	T        map[string]string
@@ -83,6 +86,7 @@ var archiveLiterals = map[string]string{
 	"This download expired. Return to the shop and prepare it again.": "x_expired",
 	"Download Software": "x_dl_title", "You are downloading": "x_ing", "Wii Points after Download:": "x_pts_after",
 	"Blocks after Download:": "x_blocks_after", "Blocks": "x_blocks",
+	"There is not enough space in the Wii System Memory.": "x_nospace",
 	"Please note that Wii Points will not be deducted from your account until the transaction is successful.": "x_note",
 	"Visit support.nintendo.com for assistance.":                                                              "x_support",
 	"You can download this software again without using any Wii Points.":                                      "x_again",

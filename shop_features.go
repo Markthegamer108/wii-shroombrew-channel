@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -256,6 +257,12 @@ func (s *storefront) checkout(w http.ResponseWriter, r *http.Request, app catalo
 		return
 	}
 	price := classicPriceFor(app)
+	freeBlocks := 2163
+	if v := r.URL.Query().Get("blocks"); v != "" {
+		if n, convErr := strconv.Atoi(v); convErr == nil && n >= 0 {
+			freeBlocks = n
+		}
+	}
 	var owned bool
 	if err = pool.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM shroombrew_purchases WHERE wallet=$1 AND slug=$2)`, id, app.Slug).Scan(&owned); err != nil {
 		http.Error(w, "Wallet unavailable", 500)
@@ -290,7 +297,7 @@ func (s *storefront) checkout(w http.ResponseWriter, r *http.Request, app catalo
 				http.Error(w, "Wallet unavailable", 500)
 				return
 			}
-			writeArchivedCheckout(w, r, archivedCheckoutData{Page: "B_10", Mode: "pc", Name: app.Name, Balance: points, Action: "/download-file/" + app.Slug, FSBlocks: s.channelFSBlocks(app), Back: "/oss/serv/B_05.html?titleId=" + classicTitleIDForApp(app), Health: healthSafetyURL(app), TitleID: classicTitleIDForApp(app), TitleVersion: app.Shop.Version})
+			writeArchivedCheckout(w, r, archivedCheckoutData{Page: "B_10", Mode: "pc", Name: app.Name, Balance: points, Action: "/download-file/" + app.Slug, FSBlocks: s.channelFSBlocks(app), Back: "/oss/serv/B_05.html?titleId=" + classicTitleIDForApp(app), Health: healthSafetyURL(app), TitleID: classicTitleIDForApp(app), TitleVersion: app.Shop.Version, FreeBlocks: 2163})
 			return
 		}
 		// Apps that fit a channel are downloaded by the Shop's own native
@@ -339,6 +346,7 @@ func (s *storefront) checkout(w http.ResponseWriter, r *http.Request, app catalo
 		data.Page = "B_09"
 		data.Back = r.URL.Path
 		data.FSBlocks = s.channelFSBlocks(app)
+		data.FreeBlocks = freeBlocks
 	}
 	if data.Remaining < 0 {
 		data.Remaining = 0
@@ -446,7 +454,7 @@ func (s *storefront) downloadFlow(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Wallet unavailable", 500)
 			return
 		}
-		writeArchivedCheckout(w, r, archivedCheckoutData{Page: "B_10", Mode: "installer", Code: job.Code, Name: app.Name, Balance: points, Back: "/oss/serv/B_05.html?titleId=" + classicTitleIDForApp(app), Health: healthSafetyURL(app), Job: job.ID})
+		writeArchivedCheckout(w, r, archivedCheckoutData{Page: "B_10", Mode: "installer", Code: job.Code, Name: app.Name, Balance: points, Back: "/oss/serv/B_05.html?titleId=" + classicTitleIDForApp(app), Health: healthSafetyURL(app), FreeBlocks: 2163, Job: job.ID})
 		return
 	}
 	if parts[0] == "zip" && r.Method == http.MethodPost {
@@ -522,7 +530,7 @@ func (s *storefront) downloadFlow(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Wallet unavailable", 500)
 		return
 	}
-	writeArchivedCheckout(w, r, archivedCheckoutData{Page: "B_10", Name: app.Name, Balance: points, CSRF: csrfToken(id), Action: "/shop-download/zip/" + job.ID, Back: "/oss/serv/B_05.html?titleId=" + classicTitleIDForApp(app), Health: healthSafetyURL(app), Job: job.ID, State: state})
+	writeArchivedCheckout(w, r, archivedCheckoutData{Page: "B_10", Name: app.Name, Balance: points, CSRF: csrfToken(id), Action: "/shop-download/zip/" + job.ID, Back: "/oss/serv/B_05.html?titleId=" + classicTitleIDForApp(app), Health: healthSafetyURL(app), FreeBlocks: 2163, Job: job.ID, State: state})
 }
 
 func purchaseOnce(ctx context.Context, wallet, slug string, price int) error {

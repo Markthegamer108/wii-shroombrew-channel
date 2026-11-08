@@ -43,12 +43,20 @@
  if(d.Page==='B_09'){
   text('pointcost01',d.Balance);text('pointword02',d.Price);text('pointword03',d.Remaining);
   var needBlocks=Math.ceil((d.FSBlocks||0)/8);
-  var openBlocks=2163;
+  var openBlocks=parseInt(d.FreeBlocks,10);if(!(openBlocks>=0))openBlocks=2163;
   var afterBlocks=Math.max(openBlocks-needBlocks,0);
   text('blockcost01',openBlocks);text('blockcost02',needBlocks);text('blockcost03',afterBlocks);
   text('BuyMsg',L('Download this homebrew package for {n} Wii Points.',{n:d.Price}));
-  text('confirmationMsg',d.Balance<d.Price?L('You need more Wii Points.'):L('Download this software?'));
-  button('R',d.Balance<d.Price?L('Add Wii Points'):L('Download'),d.Balance<d.Price?points:submit);
+  if(d.Balance<d.Price){
+   text('confirmationMsg',L('You need more Wii Points.'));
+   button('R',L('Add Wii Points'),points);
+  }else if(needBlocks>openBlocks){
+   text('confirmationMsg',L('There is not enough space in the Wii System Memory.'));
+   button('R',L('Back'),function(){go(d.Back);});
+  }else{
+   text('confirmationMsg',L('Download this software?'));
+   button('R',L('Download'),submit);
+  }
  }
  if(d.Page==='P_01'){
   var pq='?return='+encodeURIComponent(d.Next||d.Back);
@@ -126,7 +134,7 @@
    if(d.TitleID){try{sessionStorage.setItem('shroomInstalled_'+d.TitleID,''+ (d.TitleVersion||0));}catch(e){}}
    text('rcvHead',L('You are downloading'));
    text('pointCost',String(d.Balance||0));
-   text('blockCost',String(Math.ceil((d.FSBlocks||0)/8)));
+   text('blockCost',String(Math.max(0,(parseInt(d.FreeBlocks,10)||2163)-Math.ceil((d.FSBlocks||0)/8))));
    var bigStatus=el('text03-01');
    function setStatus(html){if(bigStatus)bigStatus.innerHTML=html;}
    // The original keeps the status line empty until the download succeeds.
