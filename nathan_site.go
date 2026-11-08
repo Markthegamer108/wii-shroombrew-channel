@@ -130,6 +130,9 @@ type classicTitle struct {
 	Description     string   `json:"description"`
 	// IsNew puts the shop's golden NEW badge on the title's welcome tile.
 	IsNew bool `json:"isNew,omitempty"`
+	// Demo marks a WiiWare demo build. The real shop labelled it Demo and gave
+	// it away free.
+	Demo bool `json:"demo,omitempty"`
 	// NotAvailable marks a catalog title whose WAD is no longer mirrored.
 	NotAvailable bool `json:"notAvailable,omitempty"`
 	// TitleVersion is the catalog's title version, used to detect updates.
@@ -160,7 +163,37 @@ func classicPrice(slug string) int {
 // classicPriceFor returns the authentic licensed price (0 for the free
 // channels, as the real shop sold them), 0 for Flash titles (free), and the
 // derived price otherwise.
+// isDemoApp reports a licensed WiiWare demo build. The archived WAD names and
+// the More Details pages both say "demo"; the primary variant is checked so a
+// full release with a separate demo variant is not mislabelled.
+func isDemoApp(app catalogApp) bool {
+	if !app.Licensed {
+		return false
+	}
+	isDemoURL := func(u string) bool {
+		u = strings.ToLower(u)
+		return strings.Contains(u, "(demo)") || strings.Contains(u, "%28demo%29")
+	}
+	if isDemoURL(app.URL.Zip) {
+		return true
+	}
+	for _, v := range app.Variants {
+		if v.TitleID == app.Shop.TitleId && isDemoURL(v.Zip) {
+			return true
+		}
+	}
+	// The archived More Details page is the strongest signal: the shop itself
+	// printed "This is a demo version" for these releases.
+	if strings.Contains(strings.ToLower(moreDetailsDesc[strings.ToUpper(app.Shop.TitleId)]), "demo version") {
+		return true
+	}
+	return false
+}
+
 func classicPriceFor(app catalogApp) int {
+	if isDemoApp(app) {
+		return 0
+	}
 	if app.Price > 0 || app.Licensed {
 		return app.Price
 	}
@@ -359,15 +392,24 @@ func classicTitleFor(app catalogApp) classicTitle {
 	if app.Platform != "" {
 		console = app.Platform
 	}
+	displayGenre := app.Genre
+	if isDemoApp(app) {
+		if strings.TrimSpace(displayGenre) == "" {
+			displayGenre = "Demo"
+		} else if !strings.Contains(strings.ToLower(displayGenre), "demo") {
+			displayGenre += ", Demo"
+		}
+	}
 	return classicTitle{
 		ID: classicTitleIDForApp(app), Title1: app.Name, Title2: app.Subtitle, Console: console,
 		Region: "US", Language: "EN", Publisher: app.Author, Genre: category,
 		Date: releaseDate, ReleaseUnix: app.ReleaseDate, Added: releaseDate, Points: strconv.Itoa(classicPriceFor(app)), Players: app.Players, Attributes: "",
-		Controllers: controllerText(app), ControllerIcons: controllerIcons(app), ControllerExtra: controllerExtra(app), DisplayGenre: app.Genre,
+		Controllers: controllerText(app), ControllerIcons: controllerIcons(app), ControllerExtra: controllerExtra(app), DisplayGenre: displayGenre,
 		Rating: app.Rating, RatingDetails: app.RatingDetails, Size: size,
 		Link:      "/download/" + app.Slug,
 		Thumbnail: "/icons/" + app.Slug + ".png", Description: app.Description.Short,
 		IsNew:        app.Added > 0 && time.Since(time.Unix(app.Added, 0)) < 30*24*time.Hour,
+		Demo:         isDemoApp(app),
 		NotAvailable: app.Licensed && strings.TrimSpace(app.URL.Zip) == "",
 		TitleVersion: app.Shop.Version,
 	}
@@ -771,7 +813,7 @@ function makeDownloadButton(){
  if(!game)return;
  var gver=game.titleVersion||0;
  put('Title1',game.title1);put('Title2',game.title2);put('DisplayCategory',game.displayGenre||game.genre);
- put('PublisherName',game.publisher);put('Description',game.description);put('ReleaseDate',game.date?'Released '+game.date:'');
+ put('PublisherName',game.publisher);put('Description',(game.demo?'This is a demo version. ':'')+game.description);put('ReleaseDate',game.date?'Released '+game.date:'');
  put('Console',game.console||'Homebrew');put('NumPlayers',game.players||'');
  var thumb=document.getElementById('Thumbnail');if(thumb)thumb.src=game.thumbnail;
  // Parental Controls: hide the purchase/download button above the set level.
@@ -806,7 +848,7 @@ function makeDownloadButton(){
  } else {
   if(button)button.style.display='';
   if(downloaded)downloaded.style.display='none';
-  if(caption)caption.innerHTML=isUpdate?'Update':'Download';
+  if(caption)caption.innerHTML=isUpdate?'Update':(parseInt(game.points,10)===0?'Free':'Download');
   if(price)price.innerHTML=game.points+' Wii Points';
   if(link){ link.href='/wii-install/title/'+selected; link.target='_self'; link.onclick=function(){try{wiiSelectSound();}catch(e){} try{sessionStorage.setItem('shroomInstalled_'+selected,''+game.titleVersion);}catch(e){} shroomNavigate('/wii-install/title/'+selected);return false;}; }
  }
@@ -950,7 +992,7 @@ function render(){
   // "Updated!" tab above the tile: the shop's own new_update.png outline with
   // the blue word on top. Shown when an older version is installed.
   if(g.titleVersion)html+='<div class="shroom-updated" data-id="'+esc(g.id)+'" data-ver="'+g.titleVersion+'" style="display:none;position:absolute;left:18px;top:-10px;width:150px;height:23px;z-index:14"><img src="/oss/oss/common/images/banner/new_update.png" width="150" height="23" style="position:absolute;left:0;top:0;border:0" /><span style="position:absolute;left:0;top:5px;width:150px;text-align:center;color:#34beed;font-size:11px;font-weight:bold">Updated!</span></div>';
-  html+='<div id="regularTitle"><div id="spacer"><a onclick="if(new Date().getTime()<shroomListReady)return false;shroomNavigate(this.href);return false" href="/oss/serv/B_05.html?titleId='+encodeURIComponent(g.id)+'"><img src="/oss/oss/common/images/spacer.gif" width="488" height="91" border="0" /></a></div><div id="points"><div align="right" class="catalogTitleBlackBold">'+(parseInt(g.points,10)===0?'Downloadable':esc(g.points)+' Wii Points')+'</div></div></div>';
+  html+='<div id="regularTitle"><div id="spacer"><a onclick="if(new Date().getTime()<shroomListReady)return false;shroomNavigate(this.href);return false" href="/oss/serv/B_05.html?titleId='+encodeURIComponent(g.id)+'"><img src="/oss/oss/common/images/spacer.gif" width="488" height="91" border="0" /></a></div><div id="points"><div align="right" class="catalogTitleBlackBold">'+(g.notAvailable?'Not Available':(g.demo?'Free':(parseInt(g.points,10)===0?'Downloadable':esc(g.points)+' Wii Points')))+'</div></div></div>';
   html+='<img src="/oss/oss/common/images/banner/B_04_softbanner_a.gif" width="488" height="91" border="0" /></div>';
  }
  // A press that opened this list must not also open the row now under the pointer.
@@ -1173,6 +1215,10 @@ func (s *storefront) classicSiteHandler(soap http.Handler) http.Handler {
 			w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
 			w.Write(classicCatalogFallbackJS())
 			return
+		case "/shroombrew-browse.js":
+			w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
+			w.Write(classicBrowseJS())
+			return
 		}
 		if strings.HasPrefix(r.URL.Path, "/download/") {
 			s.classicDownload(w, r)
@@ -1339,12 +1385,26 @@ func (s *storefront) classicSiteHandler(soap http.Handler) http.Handler {
 				text = strings.Replace(text, "</head>", "<style type=\"text/css\">#shroomWhatsNew{display:none!important}</style></head>", 1)
 				text = strings.Replace(text, "</body>", "<script type=\"text/javascript\" src=\"/shroombrew-popular.js\"></script><script type=\"text/javascript\" src=\"/shroombrew-catalog.js\"></script></body>", 1)
 			}
+			if filePath == "/oss/serv/B_16.html" || filePath == "/oss/serv/B_17.html" {
+				text = strings.Replace(text, "</body>", "<script type=\"text/javascript\" src=\"/shroombrew-browse.js\"></script></body>", 1)
+			}
 			if filePath == "/oss/serv/W_01.html" {
 				// The connecting screen draws the shop's two dotted rules, but the
 				// captured W_01 page has none, so they vanished as soon as the shop
 				// opened. Put the same rules back on the first shop page.
 				dots := `<div class="dot" id="line01">` + shellDots + `</div><div class="dot" id="line02">` + shellDots + `</div>`
 				text = strings.Replace(text, "</body>", dots+"<script type=\"text/javascript\" src=\"/shroombrew-welcome.js\"></script></body>", 1)
+			}
+			if strings.HasPrefix(filePath, "/oss/serv/") && strings.HasSuffix(filePath, ".html") {
+				// Keep the two rules on every normal shop page, including pages
+				// that are not wired into the current navigation. B_13 is a
+				// full-screen health warning and M_01 is the manual viewer; both
+				// deliberately have no frame.
+				if filePath != "/oss/serv/B_13.html" && filePath != "/oss/serv/M_01.html" &&
+					!strings.Contains(text, `id="line01"`) && !strings.Contains(text, `id="line02"`) {
+					dots := `<div class="dot" id="line01">` + shellDots + `</div><div class="dot" id="line02">` + shellDots + `</div>`
+					text = strings.Replace(text, "</body>", dots+"</body>", 1)
+				}
 			}
 			if filePath == "/oss/serv/B_05.html" {
 				text = strings.Replace(text, "</body>", "<script type=\"text/javascript\" src=\"/shroombrew-detail.js\"></script></body>", 1)
