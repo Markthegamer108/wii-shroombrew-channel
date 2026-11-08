@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"crypto/sha256"
+	_ "embed"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	_ "image/jpeg"
 	_ "image/png"
 	"io/fs"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -570,6 +572,75 @@ if(window.setTimeout)setTimeout(directShopHome,100);else directShopHome();
 })();`)
 }
 
+// The archived frontend includes the real per-title, per-language More Details
+// pages (9,142 of them). Each page names the two CCS screenshot contents the
+// shop showed for that title and language, so B_06 can use the same images
+// instead of guessing from the folder layout.
+//
+//go:embed moredetails_shots.json
+var moreDetailsShotsJSON []byte
+
+var moreDetailsShots = func() map[string][]string {
+	var m map[string][]string
+	if err := json.Unmarshal(moreDetailsShotsJSON, &m); err != nil {
+		log.Printf("more details screenshot map: %v", err)
+		return map[string][]string{}
+	}
+	return m
+}()
+
+// The same archive keeps the original English long description for each
+// title. B_06 shows that text where available, so the page reads like the
+// shop's own copy instead of the catalogue's one-line summary.
+//
+//go:embed moredetails_desc.json
+var moreDetailsDescJSON []byte
+
+var moreDetailsDesc = func() map[string]string {
+	var m map[string]string
+	if err := json.Unmarshal(moreDetailsDescJSON, &m); err != nil {
+		log.Printf("more details description map: %v", err)
+		return map[string]string{}
+	}
+	return m
+}()
+
+// moreDetailsShotIDs returns the two CCS contents the archived page used for
+// this title and language. Japanese and Korean use the archive's JP/KR keys;
+// languages without their own page fall back to English.
+func moreDetailsShotIDs(titleID, lang string) []string {
+	code := lang
+	switch code {
+	case "ja":
+		code = "jp"
+	case "ko":
+		code = "kr"
+	case "zh-cn", "zh-tw", "pt":
+		code = "en"
+	}
+	if shots := moreDetailsShots[titleID+"|"+code]; len(shots) >= 2 {
+		return shots
+	}
+	if code != "en" {
+		if shots := moreDetailsShots[titleID+"|en"]; len(shots) >= 2 {
+			return shots
+		}
+	}
+	return nil
+}
+
+// ccsFilesExist reports whether every named CCS content is present locally, so
+// a page archived for a title whose assets were not mirrored falls back to the
+// local folder instead of showing broken images.
+func ccsFilesExist(titleID string, names []string) bool {
+	for _, name := range names {
+		if info, err := os.Stat(filepath.Join(nathanSiteRoot, "oss", "ccs", titleID, name)); err != nil || info.IsDir() {
+			return false
+		}
+	}
+	return true
+}
+
 // ccsShotCache remembers the two chosen screenshots per title.
 var ccsShotCache = struct {
 	sync.Mutex
@@ -634,14 +705,18 @@ func ccsScreenshots(titleID string) []string {
 // ships with a demo game's paragraph and screenshots (Urbanix); the real More
 // Details page shows the title the player came from, so the long description,
 // title lines and the title's own CCS screenshots replace the placeholder.
-func classicMoreDetailsPage(text string, app catalogApp) string {
-	desc := strings.TrimSpace(app.Description.Long)
+func classicMoreDetailsPage(text string, app catalogApp, lang string) string {
+	titleID := classicTitleIDForApp(app)
+	desc := strings.TrimSpace(moreDetailsDesc[titleID])
 	if desc == "" {
-		desc = strings.TrimSpace(app.Description.Short)
+		desc = strings.TrimSpace(app.Description.Long)
+		if desc == "" {
+			desc = strings.TrimSpace(app.Description.Short)
+		}
+		desc = strings.ReplaceAll(html.EscapeString(desc), "\r\n", "\n")
+		desc = strings.ReplaceAll(desc, "\n\n", "<p>")
+		desc = strings.ReplaceAll(desc, "\n", "<br>")
 	}
-	desc = strings.ReplaceAll(html.EscapeString(desc), "\r\n", "\n")
-	desc = strings.ReplaceAll(desc, "\n\n", "<p>")
-	desc = strings.ReplaceAll(desc, "\n", "<br>")
 	if start := strings.Index(text, `<div id="text" class="buttonTextBlackM">`); start >= 0 {
 		if end := strings.Index(text[start:], `<div id="image02">`); end > 0 {
 			text = text[:start] + `<div id="text" class="buttonTextBlackM">` + desc + "</div>\n  " + text[start+end:]
@@ -655,9 +730,15 @@ func classicMoreDetailsPage(text string, app catalogApp) string {
 	text = strings.Replace(text, `id="Title2"></span>`, `id="Title2">`+html.EscapeString(app.Subtitle)+`</span>`, 1)
 	text = strings.Replace(text, `id="Console"></div>`, `id="Console">`+html.EscapeString(console)+`</div>`, 1)
 	// The page's two screenshot slots point at the demo title; swap in the
-	// selected title's two best CCS captures and hide a slot when it has none.
-	titleID := classicTitleIDForApp(app)
-	shots := ccsScreenshots(titleID)
+	// exact contents the archived page used for this title and language, or the
+	// local folder's best pair when that title was not archived.
+	names := moreDetailsShotIDs(titleID, lang)
+	var shots []string
+	if len(names) >= 2 && ccsFilesExist(titleID, names) {
+		shots = []string{"/oss/ccs/" + titleID + "/" + names[0], "/oss/ccs/" + titleID + "/" + names[1]}
+	} else {
+		shots = ccsScreenshots(titleID)
+	}
 	if len(shots) > 0 {
 		text = strings.Replace(text, `src="/oss/ccs/0001000158494745/FFFD0005"`, `src="`+shots[0]+`"`, 1)
 	} else {
@@ -670,7 +751,7 @@ func classicMoreDetailsPage(text string, app catalogApp) string {
 	}
 	// The captured initPage is ES6 and cannot parse on the console; this one
 	// only wires Back (the details are already in the markup).
-	text = strings.Replace(text, "</body>", `<script type="text/javascript">function initPage(){if(typeof setUnderButtonL=='function')setUnderButtonL(true,'Back','javascript:showBack()','wiiCancelSound()');if(typeof setCursor=='function'){try{setCursor(document);}catch(e){}}}</script></body>`, 1)
+	text = strings.Replace(text, "</body>", `<script type="text/javascript">function initPage(){if(typeof setUnderButtonL=='function')setUnderButtonL(true,'Back','javascript:showBack()','wiiCancelSound()');if(typeof setCursor=='function'){try{setCursor(document);}catch(e){}}}function kdown(id){var e=window.event,n=document.getElementById(id);if(!e||!n)return;if(e.keyCode==38)n.scrollTop-=30;else if(e.keyCode==40)n.scrollTop+=30;}</script></body>`, 1)
 	return text
 }
 
@@ -1257,7 +1338,7 @@ func (s *storefront) classicSiteHandler(soap http.Handler) http.Handler {
 			if filePath == "/oss/serv/B_06.html" {
 				if id := strings.ToUpper(r.URL.Query().Get("titleId")); id != "" {
 					if app, ok := s.appByTitleID(id); ok {
-						text = classicMoreDetailsPage(text, app)
+						text = classicMoreDetailsPage(text, app, langFor(r))
 					}
 				}
 			}
