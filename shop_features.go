@@ -127,6 +127,8 @@ func (s *storefront) featureHandler(next http.Handler) http.Handler {
 			s.freePointsPage(w, r)
 		case strings.HasPrefix(r.URL.Path, "/points/"):
 			s.pointsFlow(w, r)
+		case strings.HasPrefix(r.URL.Path, "/settings/pc"):
+			s.parentalPage(w, r)
 		case r.URL.Path == "/help" || r.URL.Path == "/activity" || r.URL.Path == "/downloaded" || r.URL.Path == "/settings" || r.URL.Path == "/controllers" || r.URL.Path == "/news" || r.URL.Path == "/oss/serv/W_02.html":
 			s.featureInfo(w, r)
 		case strings.HasPrefix(r.URL.Path, "/wii-install/title/"):
@@ -262,6 +264,7 @@ func (s *storefront) checkout(w http.ResponseWriter, r *http.Request, app catalo
 				return
 			}
 			recordPurchaseVersion(r.Context(), id, app.Slug, app.Shop.Version)
+			logDownload(r.Context(), app.Slug, "pc")
 			if points, err = walletBalance(id); err != nil {
 				http.Error(w, "Wallet unavailable", 500)
 				return
@@ -284,6 +287,7 @@ func (s *storefront) checkout(w http.ResponseWriter, r *http.Request, app catalo
 				return
 			}
 			recordPurchaseVersion(r.Context(), id, app.Slug, app.Shop.Version)
+			logDownload(r.Context(), app.Slug, "channel")
 			// The next screen asks Wii System Memory or SD Card, like B_09 did.
 			http.Redirect(w, r, "/native-ec/title/"+classicTitleIDForApp(app), http.StatusSeeOther)
 			return
@@ -297,6 +301,7 @@ func (s *storefront) checkout(w http.ResponseWriter, r *http.Request, app catalo
 			http.Error(w, "Download unavailable", 500)
 			return
 		}
+		logDownload(r.Context(), app.Slug, "sd")
 		http.Redirect(w, r, "/shop-download/prepare/"+job.ID, 303)
 		return
 	}
@@ -344,6 +349,8 @@ func (s *storefront) ownedFileDownload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	pool.Exec(r.Context(), `UPDATE shroombrew_purchases SET delivered_at=now() WHERE wallet=$1 AND slug=$2`, id, app.Slug)
+	// First download of this title pays the play reward.
+	awardPlayPoints(r.Context(), id, app.Slug)
 	http.Redirect(w, r, target, http.StatusFound)
 }
 

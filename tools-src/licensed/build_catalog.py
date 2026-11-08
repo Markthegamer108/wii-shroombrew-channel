@@ -302,6 +302,189 @@ def describe(cat, system, game, region):
     return short, long
 
 
+# --- Channel extras -------------------------------------------------------
+# The sheet predates several channels and lists a few under older names, so the
+# rows below pin down the real titles the shop should show. They are applied to
+# every generated catalog; the six newest carry `added` so only those wear the
+# golden NEW badge (30-day window in Go).
+
+ADDED_CHANNELS = 1794096000  # 2026-11-08, the day they joined the catalog.
+
+CHANNEL_FIXES = {
+    "netflix-for-wii": dict(name="Netflix", genre="Streaming Video",
+                            players="For 1 player", release_date=1287360000),
+    "bbc-iplayer": dict(name="BBC iPlayer", genre="Internet TV",
+                        players="For 1 player", release_date=0),
+    "kirby-tv-channel": dict(name="Kirby TV Channel", genre="TV Channel",
+                             players="For 1 player", release_date=1308787200),
+    "legend-of-zelda-the-skyward-sword-save-d": dict(
+        name="Zelda Skyward Sword Save Data Update Channel", genre="Channel update",
+        players="None", release_date=1324512000),
+    "internet-channel": dict(name="Internet Channel", genre="Internet Browser",
+                             players="For 1-4 players", release_date=1176249600),
+    "everybody-votes-channel": dict(name="Everybody Votes Channel", genre="Voting",
+                                    players="For 1-6 players", release_date=1171324800),
+    "nintendo-channel": dict(name="Nintendo Channel", genre="Information",
+                             players="For 1 player", release_date=1210118400),
+    "today-and-tomorrow-channel": dict(name="Today and Tomorrow Channel",
+                                       genre="Lifestyle", players="For 1-6 players",
+                                       release_date=1252454400),
+    "metroid-prime-3-preview-channel": dict(name="Metroid Prime 3 Preview",
+                                            genre="Preview", players="For 1 player",
+                                            release_date=1186704000),
+    "jam-with-the-band-live": dict(name="Jam with the Band Live Channel",
+                                   genre="Add-on Channel", players="For 1-8 players",
+                                   release_date=1274400000),
+    "wii-speak-channel-2-0": dict(name="Wii Speak Channel", genre="Voice Communication",
+                                  players="For 1-4 players", release_date=1228435200),
+}
+
+
+def channel_desc(name, note):
+    return {
+        "short": note,
+        "long": note + " It installs to your Wii Menu as its own channel and opens without the disc.",
+    }
+
+
+def channel_variant(region, group, tid, url):
+    return {"region": region, "region_group": group, "title_id": tid, "zip": url, "price": 0}
+
+
+def channel_row(slug, name, author, genre, players, release, tid, ver, url, size,
+                variants, note):
+    return {
+        "slug": slug,
+        "name": name,
+        "author": author,
+        "category": "Channels",
+        "version": "",
+        "licensed": True,
+        "price": 0,
+        "description": channel_desc(name, note),
+        "url": {"icon": "", "zip": url},
+        "file_size": {"zip_compressed": size, "zip_uncompressed": 0},
+        "shop": {"title_id": tid, "title_version": ver, "contents_size": 0},
+        "peripherals": [],
+        "release_date": release,
+        "platform": "Wii Channel",
+        "genre": genre,
+        "controllers": ["RvlCtrl"],
+        "controller_note": "You can use this software only with the Wii Remote.",
+        "players": players,
+        "size": size,
+        "variants": variants,
+        "added": ADDED_CHANNELS,
+    }
+
+
+def apply_channel_extras(apps):
+    by_slug = {a["slug"]: a for a in apps}
+    by_tid = {}
+    for a in apps:
+        tid = (a.get("shop") or {}).get("title_id")
+        if tid:
+            by_tid[tid.upper()] = a
+
+    def find(slug, tid=None):
+        if slug in by_slug:
+            return by_slug[slug]
+        return by_tid.get((tid or "").upper())
+
+    for slug, patch in CHANNEL_FIXES.items():
+        a = find(slug)
+        if a is None:
+            continue
+        a.update(patch)
+        a["platform"] = "Wii Channel"
+        a["description"] = channel_desc(a["name"], a["description"].get("short") or
+                                        ("A Wii Shop Channel for " + a["name"] + "."))
+
+    # Photo Channel 1.1 is the World v3 release; the sheet's row points at the
+    # Korean build and uses a title ID that belonged to Photo Channel 1.0.
+    photo = find("photo-channel-v1-1", "0001000048415A41")
+    if photo is not None:
+        world = BASE + "/P/Photo%20Channel%20v1.1%20(World)%20(v3)%20(Channel).wad"
+        korea = BASE + "/P/Photo%20Channel%20v1.1%20(Korea)%20(v3)%20(Channel).wad"
+        photo.update({
+            "slug": "photo-channel-v1-1",
+            "name": "Photo Channel 1.1",
+            "author": "Nintendo",
+            "platform": "Wii Channel",
+            "genre": "Channel update",
+            "players": "For 1-4 players",
+            "release_date": 1197331200,
+            "size": 8197952,
+            "shop": {"title_id": "0001000048415A41", "title_version": 3, "contents_size": 0},
+            "url": {"icon": "", "zip": world},
+            "file_size": {"zip_compressed": 8197952, "zip_uncompressed": 0},
+            "description": channel_desc("Photo Channel 1.1",
+                                        "The updated Photo Channel, with support for MP3 music in slideshows."),
+            "variants": [
+                channel_variant("world", "OTHER", "0001000048415A41", world),
+                channel_variant("korea", "KR", "000100024841594b", korea),
+            ],
+        })
+
+    extras = [
+        channel_row(
+            "mii-contest-channel", "Mii Contest Channel", "Nintendo", "New Channel",
+            "For 1 player", 0, "0001000148415050", 512,
+            BASE + "/M/Mii%20Contest%20Channel%20(Europe)%20(v512)%20(Channel).wad", 23085184,
+            [channel_variant("europe", "EU", "0001000148415050",
+                             BASE + "/M/Mii%20Contest%20Channel%20(Europe)%20(v512)%20(Channel).wad")],
+            "Enter Mii contests and vote on other players' creations."),
+        channel_row(
+            "wii-u-transfer-tool", "Wii U Transfer Tool", "Nintendo", "System Tool",
+            "For 1 player", 0, "0001000148435350", 257,
+            BASE + "/W/Wii%20U%20Transfer%20Tool%20(Europe)%20(v257)%20(Channel).wad", 16177920,
+            [channel_variant("usa", "US", "0001000148435345",
+                             BASE + "/W/Wii%20U%20Transfer%20Tool%20(USA)%20(v257)%20(Channel).wad"),
+             channel_variant("europe", "EU", "0001000148435350",
+                             BASE + "/W/Wii%20U%20Transfer%20Tool%20(Europe)%20(v257)%20(Channel).wad")],
+            "Moves your Wii data to a Wii U. It needs a Wii U Transfer Tool on the other console."),
+        channel_row(
+            "youtube", "YouTube", "Google", "Streaming Video",
+            "For 1 player", 0, "0001000148435845", 1536,
+            BASE + "/Y/YouTube%20(USA)%20(v1536)%20(Channel).wad", 14666176,
+            [channel_variant("usa", "US", "0001000148435845",
+                             BASE + "/Y/YouTube%20(USA)%20(v1536)%20(Channel).wad"),
+             channel_variant("europe", "EU", "0001000148435850",
+                             BASE + "/Y/YouTube%20(Europe)%20(v1537)%20(Channel).wad")],
+            "Watch YouTube videos on your TV with the Wii Remote."),
+        channel_row(
+            "homebrew-channel-open-source-edition",
+            "Homebrew Channel - Open Source Edition", "Team Twiizers", "Homebrew",
+            "For 1 player", 1742947200, "000100014F484243", 0,
+            "https://github.com/FIX94/hbc/releases/download/1.1.4-1/Homebrew.Channel.-.OHBC.wad", 1642240,
+            [channel_variant("world", "OTHER", "000100014F484243",
+                             "https://github.com/FIX94/hbc/releases/download/1.1.4-1/Homebrew.Channel.-.OHBC.wad")],
+            "The open-source Homebrew Channel, built by the community for easy homebrew launching."),
+        channel_row(
+            "lovefilm", "LOVEFiLM", "LOVEFiLM", "Movies and TV Shows",
+            "For 1 player", 1354492800, "0001000148435750", 0, "", 0,
+            [channel_variant("europe", "EU", "0001000148435750", "")],
+            "Stream films and TV shows from LOVEFiLM. The channel is listed for completeness;"
+            " the WAD is no longer available."),
+        channel_row(
+            "zelda-save-data-update-channel-2", "Zelda Save Data Update Channel 2",
+            "Nintendo", "Channel update", "None", 1324512000, "00010000534F5550", 1,
+            BASE + "/_Clean/S/Skyward%20Sword%20Save%20Data%20Update%202%20(Europe)%20(v1)%20(SOUP).wad", 7308416,
+            [channel_variant("usa", "US", "00010000534F5545",
+                             BASE + "/_Clean/S/Skyward%20Sword%20Save%20Data%20Update%202%20(USA)%20(v1)%20(SOUE).wad"),
+             channel_variant("europe", "EU", "00010000534F5550",
+                             BASE + "/_Clean/S/Skyward%20Sword%20Save%20Data%20Update%202%20(Europe)%20(v1)%20(SOUP).wad")],
+            "The second Skyward Sword save data update, used to fix saves affected by the Song of the Hero bug."),
+    ]
+    for entry in extras:
+        old = find(entry["slug"], entry["shop"]["title_id"])
+        if old is None:
+            apps.append(entry)
+        else:
+            old.update(entry)
+    return apps
+
+
 def main():
     if len(sys.argv) != 3:
         print("usage: build_catalog.py WAD_Info.xlsx out_catalog.json", file=sys.stderr)
@@ -377,6 +560,7 @@ def main():
         entry["slug"] = s
         apps.append(entry)
 
+    apply_channel_extras(apps)
     print(f"catalog apps generated: {len(apps)}; unmatched: {missing}", file=sys.stderr)
     with open(sys.argv[2], "w", encoding="utf-8") as f:
         json.dump(apps, f, ensure_ascii=False, indent=1)

@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 )
 
 var welcomeNonAlnum = regexp.MustCompile(`[^a-z0-9]+`)
@@ -115,14 +116,20 @@ func (s *storefront) welcomeLists(region string) []welcomeList {
 	return lists
 }
 
-// welcomeNew lists the titles that get the NEW badge: the New Homebrew list.
-func welcomeNew(lists []welcomeList) map[string]bool {
+// welcomeNew lists the titles that get the NEW badge: the New Homebrew list
+// and anything added to Shroombrew in the last 30 days.
+func welcomeNew(lists []welcomeList, apps []catalogApp) map[string]bool {
 	isNew := map[string]bool{}
 	for _, list := range lists {
 		if list.Label == "New Homebrew" {
 			for _, app := range list.Titles {
 				isNew[classicTitleIDForApp(app)] = true
 			}
+		}
+	}
+	for _, app := range apps {
+		if app.Added > 0 && time.Since(time.Unix(app.Added, 0)) < 30*24*time.Hour {
+			isNew[classicTitleIDForApp(app)] = true
 		}
 	}
 	return isNew
@@ -155,7 +162,7 @@ func (s *storefront) classicHomeJS(r *http.Request) []byte {
 		data = append(data, ids)
 	}
 	newIDs := []string{}
-	for id := range welcomeNew(lists) {
+	for id := range welcomeNew(lists, s.apps) {
 		newIDs = append(newIDs, id)
 	}
 	sort.Strings(newIDs)
@@ -168,7 +175,7 @@ func (s *storefront) classicHomeJS(r *http.Request) []byte {
 // titles its lists show, so Wii Opera need not parse the whole catalog.
 func (s *storefront) classicFeaturedGamesJS(r *http.Request) []byte {
 	lists := s.welcomeLists(regionFor(r))
-	isNew := welcomeNew(lists)
+	isNew := welcomeNew(lists, s.apps)
 	titles := []classicTitle{{}} // the shop's lists begin at index one
 	seen := map[string]bool{}
 	for _, list := range lists {
@@ -178,7 +185,7 @@ func (s *storefront) classicFeaturedGamesJS(r *http.Request) []byte {
 				continue
 			}
 			seen[t.ID] = true
-			t.IsNew = isNew[t.ID]
+			t.IsNew = t.IsNew || isNew[t.ID]
 			titles = append(titles, t)
 		}
 	}

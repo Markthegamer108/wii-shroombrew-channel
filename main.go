@@ -150,6 +150,8 @@ func main() {
 	checkError(err)
 	checkError(initShopWallets())
 	checkError(initShopPurchases())
+	checkError(initDownloadLog())
+	checkError(initPlayRewards())
 	checkError(initSecrets())
 	checkError(initCommunity())
 	go cardJanitor()

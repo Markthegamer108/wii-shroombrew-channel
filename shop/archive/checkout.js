@@ -111,18 +111,39 @@
   var note=document.createElement('div');note.id='archiveNote';document.body.appendChild(note);
   status.style.top='148px';
   text('archiveNote',L('Preparing software for your SD card.'));
-  var animation=new ShroomMarioDownload(document.body),finished=false;
+  var animPick=parseInt((location.search.match(/[?&]anim=(\d)/)||[])[1],10);// 0 coins, 1 Star Mario, 2 Bullet Bills, 3 Fire Mario; ?anim=N forces one.
+   if(!(animPick>=0&&animPick<=3))animPick=Math.floor(Math.random()*4);var animation=new ShroomMarioDownload(document.body,animPick),finished=false;
   function readyActions(){text('archiveStatus',L('Your homebrew package is ready.'));text('archiveNote',L('Use Shroombrew Installer on your Wii, or')+' ');var zip=document.createElement('a');zip.href='#';zip.appendChild(document.createTextNode(L('download the ZIP instead.')));zip.onclick=function(){submit();return false;};el('archiveNote').appendChild(zip);button('R',L('Install on Wii'),function(){el('archiveForm').action='/shop-download/installer/'+encodeURIComponent(d.Job);submit();});}
   function finish(message,ready){if(finished)return;finished=true;text('archiveStatus',message);if(ready)animation.finish(readyActions);else animation.stop();}
   if(d.Mode==='pc'){
-   // PC browser: play the shell's own download scene (the same one every
-   // title gets on wiishopchannel.net), then save the file to Downloads.
-   text('archiveStatus',L('Downloading software...'));text('archiveNote','');
-   var saved=false;
-   window.handleReportDownloadDone=function(){if(saved)return;saved=true;var f=document.createElement('iframe');f.style.display='none';f.src=d.Action;document.body.appendChild(f);text('rcvHead',L('You downloaded'));text('archiveStatus',L('Download successful!'));text('archiveNote',L('The file was saved to your Downloads folder.'));button('R','OK',function(){go(d.Back);});};
-   var shell=null;try{if(parent!==window&&typeof parent.download==='function')shell=parent;}catch(e){}
-   if(shell){animation.stop();shell.download(Math.max(1,Math.ceil((d.FSBlocks||8)/8)));}
-   else{var t=0,iv=setInterval(function(){t+=.05;animation.setProgress(t);if(t>=1){clearInterval(iv);animation.finish(window.handleReportDownloadDone);}},150);}
+   // PC browser: the same Download Software screen as the console. The page's
+   // own lines (You downloaded / title / points and blocks after download /
+   // the big blue Download successful! / the centred OK) are filled in place.
+   if(status)status.style.display='none';
+   if(note)note.style.display='none';
+   show('underButtonL',false);
+   show('details',true);
+   text('rcvHead',L('You are downloading'));
+   text('pointCost',String(d.Balance||0));
+   text('blockCost',String(Math.ceil((d.FSBlocks||0)/8)));
+   var bigStatus=el('text03-01');
+   function setStatus(html){if(bigStatus)bigStatus.innerHTML=html;}
+   // The original keeps the status line empty until the download succeeds.
+   if(bigStatus)bigStatus.style.display='none';
+   // Show the centre OK the moment the download starts; it is the page's own.
+   ['bannershadow','spacerL','bannerL','wordL'].forEach(function(id){var n=el(id);if(n)n.style.display='';});
+   var okAnchor=document.getElementById('OKBtnAnchor');
+   if(okAnchor){okAnchor.href='#';okAnchor.onclick=function(){try{wiiSelectSound();}catch(e){}go(d.Back);return false;};}
+   setTimeout(function(){
+     if(animation)animation.stop();
+     var f=document.createElement('iframe');f.style.display='none';f.src=d.Action;document.body.appendChild(f);
+     try{window.location.href=d.Action;}catch(e){}
+     // The original switches the header, moves the status line down to 226px
+     // and uses its blue title style for the success message.
+     text('rcvHead',L('You downloaded'));
+     if(bigStatus){bigStatus.style.display='';bigStatus.style.top='226px';}
+     setStatus('<div align="center" class="titleBlueL">'+L('Download successful!')+'</div>');
+   },1500);
    return;
   }
   if(d.Mode==='installer'){

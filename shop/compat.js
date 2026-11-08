@@ -58,7 +58,6 @@ function shroomBack() {
   if (parent !== window && parent.hist && parent.hist.length > 1) {
     var previous = parent.hist[parent.hist.length - 2];
     parent.hist.pop(); parent.hist.pop();
-    while (previous && (previous.indexOf('/B_01.') !== -1 || previous.indexOf('/B_27.') !== -1) && parent.hist.length) previous = parent.hist.pop();
     shroomNavigate(previous);
   } else shroomNavigate('/oss/serv/W_03.html');
 }
@@ -105,10 +104,7 @@ function shroomInstallBridge() {
     } catch (e) {}
   }
   if (shroomNativeClient) { try { if (typeof snd !== 'undefined') snd.playBGM(); } catch (e) {} }
-  // Keep category entry pages connected to the homebrew catalog.
   var path = location.pathname;
-  if (!window.shroomCategoryRouted && path.indexOf('/B_01.') !== -1) { window.shroomCategoryRouted=true; shroomNavigate('/oss/serv/B_04.html?category=emulators'); }
-  if (!window.shroomCategoryRouted && path.indexOf('/B_27.') !== -1) { window.shroomCategoryRouted=true; shroomNavigate('/oss/serv/B_04.html?category=games'); }
   if (path.indexOf('/W_03.') !== -1) {
     // The main menu has Wii Menu on the left and Shopping Guide on the right.
     try {
@@ -133,10 +129,6 @@ function shroomInstallBridge() {
       // Clicking the cell may not reach the anchor's onclick in Opera 9.30.
       if (links[i].textContent && links[i].textContent.indexOf("Downloaded") !== -1) {
         links[i].href = '/downloaded';
-        links[i].onclick = function() { shroomNavigate(this.href); return false; };
-      }
-      if (target.indexOf("showPage('B_01.html')") !== -1 || target.indexOf("showPage('B_27.html')") !== -1) {
-        links[i].href = '/oss/serv/B_04.html?category=' + (target.indexOf('B_01') !== -1 ? 'emulators' : 'games');
         links[i].onclick = function() { shroomNavigate(this.href); return false; };
       }
     }

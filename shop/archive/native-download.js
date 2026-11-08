@@ -86,8 +86,18 @@ function ShroombrewNativeDownload(d) {
   }else download();
  }
  function download(){
-  try{shop.setSCARank(0);}catch(e){}
-  if(!animation&&typeof ShroomMarioDownload==='function'){try{animation=new ShroomMarioDownload(document.body);}catch(e){animation=null;}}
+  // setSCARank (OSC's Wii Shop Channel documentation):
+  //   0 = small/big Mario collecting coins
+  //   1 = Star/Invincible Mario
+  //   2 = Star Mario running through Bullet Bills (Gold Ambassador)
+  //   3 = Fire Mario (A button shoots fireballs)
+  // One scene is picked for each download; ?anim=N forces one for testing.
+  var scarank = parseInt((location.search.match(/[?&]anim=(\d)/)||[])[1],10);
+  if(!(scarank>=0&&scarank<=3))scarank = Math.floor(Math.random()*4);
+  try{shop.setSCARank(scarank);}catch(e){}
+  // On the console the Shop itself draws Mario during purchaseTitle; a DOM
+  // copy would draw a second Mario on top, so only the browser flow uses it.
+  if(!(typeof shroomNativeSound!=='undefined'&&shroomNativeSound)&&!animation&&typeof ShroomMarioDownload==='function'){try{animation=new ShroomMarioDownload(document.body, scarank);}catch(e){animation=null;}}
   call('Downloading software',function(){return ec.purchaseTitle(d.TitleID,'0',new ECPrice('0.00','POINTS'),new ECAccountPayment(),new ECTitleLimits(),true,'','','0');},function(p){
    if(Number(p.errCode)<0){fail('Native download failed: '+p.errCode);return;}
    progress(lastTotal||Number(p.totalSize)||lastBytes,lastTotal||Number(p.totalSize)||lastBytes);

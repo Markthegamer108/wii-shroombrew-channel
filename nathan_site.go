@@ -7,6 +7,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"html"
+	"image"
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
 	"io/fs"
 	"net/http"
 	"net/url"
@@ -17,6 +22,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -122,6 +128,10 @@ type classicTitle struct {
 	Description     string   `json:"description"`
 	// IsNew puts the shop's golden NEW badge on the title's welcome tile.
 	IsNew bool `json:"isNew,omitempty"`
+	// NotAvailable marks a catalog title whose WAD is no longer mirrored.
+	NotAvailable bool `json:"notAvailable,omitempty"`
+	// TitleVersion is the catalog's title version, used to detect updates.
+	TitleVersion int `json:"titleVersion,omitempty"`
 }
 
 func classicTitleID(slug string) string {
@@ -355,13 +365,33 @@ func classicTitleFor(app catalogApp) classicTitle {
 		Rating: app.Rating, RatingDetails: app.RatingDetails, Size: size,
 		Link:      "/download/" + app.Slug,
 		Thumbnail: "/icons/" + app.Slug + ".png", Description: app.Description.Short,
+		IsNew:        app.Added > 0 && time.Since(time.Unix(app.Added, 0)) < 30*24*time.Hour,
+		NotAvailable: app.Licensed && strings.TrimSpace(app.URL.Zip) == "",
+		TitleVersion: app.Shop.Version,
 	}
+}
+
+// shopChannels is the Wii Channels section: the channels the Wii Shop
+// actually offered (WiiMart's list). Other channel WADs in the catalog, such
+// as system menus and disc-game channels, stay out of the shop.
+var shopChannels = map[string]bool{
+	"netflix-for-wii": true, "bbc-iplayer": true, "kirby-tv-channel": true,
+	"legend-of-zelda-the-skyward-sword-save-d": true, "wii-u-transfer-tool": true,
+	"youtube": true, "homebrew-channel-open-source-edition": true, "lovefilm": true,
+	"photo-channel-v1-1": true, "zelda-save-data-update-channel-2": true,
+	"internet-channel": true, "everybody-votes-channel": true, "mii-contest-channel": true,
+	"nintendo-channel": true, "today-and-tomorrow-channel": true,
+	"metroid-prime-3-preview-channel": true, "jam-with-the-band-live": true,
+	"wii-speak-channel-2-0": true,
 }
 
 func (s *storefront) classicTitles() []classicTitle {
 	titles := make([]classicTitle, 0, len(s.apps)+1)
 	titles = append(titles, classicTitle{}) // The imported catalog UI begins at index one.
 	for _, app := range s.apps {
+		if app.Category == "Channels" && !shopChannels[app.Slug] {
+			continue
+		}
 		titles = append(titles, classicTitleFor(app))
 	}
 	// The shop catalog is grouped by section (category) and alphabetical
@@ -540,6 +570,110 @@ if(window.setTimeout)setTimeout(directShopHome,100);else directShopHome();
 })();`)
 }
 
+// ccsShotCache remembers the two chosen screenshots per title.
+var ccsShotCache = struct {
+	sync.Mutex
+	m map[string][]string
+}{m: map[string][]string{}}
+
+// ccsScreenshots picks the two capturable 160x120 images in a title's CCS
+// folder. Each language has a block of [logo, screenshot, screenshot] (or
+// [logo, logo, screenshot, screenshot]) 160x120 files; the last two of the
+// first block are the screenshots, which is right for both the older Urbanix
+// layout and the newer channel layout.
+func ccsScreenshots(titleID string) []string {
+	ccsShotCache.Lock()
+	if shots, ok := ccsShotCache.m[titleID]; ok {
+		ccsShotCache.Unlock()
+		return shots
+	}
+	ccsShotCache.Unlock()
+	dir := filepath.Join(nathanSiteRoot, "oss", "ccs", titleID)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil
+	}
+	var run []string
+	pick := func() []string {
+		if len(run) < 2 {
+			return nil
+		}
+		return run[len(run)-2:]
+	}
+	var out []string
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasPrefix(entry.Name(), "FFFD") {
+			continue
+		}
+		file, err := os.Open(filepath.Join(dir, entry.Name()))
+		if err != nil {
+			continue
+		}
+		cfg, _, err := image.DecodeConfig(file)
+		file.Close()
+		if err != nil || cfg.Width != 160 || cfg.Height != 120 {
+			if picked := pick(); picked != nil {
+				out = picked
+				break
+			}
+			run = nil
+			continue
+		}
+		run = append(run, "/oss/ccs/"+titleID+"/"+entry.Name())
+	}
+	if out == nil {
+		out = pick()
+	}
+	ccsShotCache.Lock()
+	ccsShotCache.m[titleID] = out
+	ccsShotCache.Unlock()
+	return out
+}
+
+// classicMoreDetailsPage fills B_06 with the selected title. The captured page
+// ships with a demo game's paragraph and screenshots (Urbanix); the real More
+// Details page shows the title the player came from, so the long description,
+// title lines and the title's own CCS screenshots replace the placeholder.
+func classicMoreDetailsPage(text string, app catalogApp) string {
+	desc := strings.TrimSpace(app.Description.Long)
+	if desc == "" {
+		desc = strings.TrimSpace(app.Description.Short)
+	}
+	desc = strings.ReplaceAll(html.EscapeString(desc), "\r\n", "\n")
+	desc = strings.ReplaceAll(desc, "\n\n", "<p>")
+	desc = strings.ReplaceAll(desc, "\n", "<br>")
+	if start := strings.Index(text, `<div id="text" class="buttonTextBlackM">`); start >= 0 {
+		if end := strings.Index(text[start:], `<div id="image02">`); end > 0 {
+			text = text[:start] + `<div id="text" class="buttonTextBlackM">` + desc + "</div>\n  " + text[start+end:]
+		}
+	}
+	console := consoleLabel(app.Category)
+	if app.Platform != "" {
+		console = app.Platform
+	}
+	text = strings.Replace(text, `id="Title1"></span>`, `id="Title1">`+html.EscapeString(app.Name)+`</span>`, 1)
+	text = strings.Replace(text, `id="Title2"></span>`, `id="Title2">`+html.EscapeString(app.Subtitle)+`</span>`, 1)
+	text = strings.Replace(text, `id="Console"></div>`, `id="Console">`+html.EscapeString(console)+`</div>`, 1)
+	// The page's two screenshot slots point at the demo title; swap in the
+	// selected title's two best CCS captures and hide a slot when it has none.
+	titleID := classicTitleIDForApp(app)
+	shots := ccsScreenshots(titleID)
+	if len(shots) > 0 {
+		text = strings.Replace(text, `src="/oss/ccs/0001000158494745/FFFD0005"`, `src="`+shots[0]+`"`, 1)
+	} else {
+		text = strings.Replace(text, `<div id="image02">`, `<div id="image02" style="display:none">`, 1)
+	}
+	if len(shots) > 1 {
+		text = strings.Replace(text, `src="/oss/ccs/0001000158494745/FFFD0006"`, `src="`+shots[1]+`"`, 1)
+	} else {
+		text = strings.Replace(text, `<div id="image01">`, `<div id="image01" style="display:none">`, 1)
+	}
+	// The captured initPage is ES6 and cannot parse on the console; this one
+	// only wires Back (the details are already in the markup).
+	text = strings.Replace(text, "</body>", `<script type="text/javascript">function initPage(){if(typeof setUnderButtonL=='function')setUnderButtonL(true,'Back','javascript:showBack()','wiiCancelSound()');if(typeof setCursor=='function'){try{setCursor(document);}catch(e){}}}</script></body>`, 1)
+	return text
+}
+
 func classicDetailFallbackJS() []byte {
 	return []byte(`(function(){
 var retries=0;
@@ -551,20 +685,50 @@ function makeDownloadButton(){
  var game=null;
  if(typeof gameslist!='undefined')for(var i=0;i<gameslist.length;i++){if(gameslist[i]&&gameslist[i].id==selected){game=gameslist[i];break;}}
  if(!game)return;
+ var gver=game.titleVersion||0;
  put('Title1',game.title1);put('Title2',game.title2);put('DisplayCategory',game.displayGenre||game.genre);
  put('PublisherName',game.publisher);put('Description',game.description);put('ReleaseDate',game.date?'Released '+game.date:'');
  put('Console',game.console||'Homebrew');put('NumPlayers',game.players||'');
  var thumb=document.getElementById('Thumbnail');if(thumb)thumb.src=game.thumbnail;
- var button=document.getElementById('buyButton'); if(button)button.style.display='';
- var caption=document.getElementById('text03-01'); if(caption)caption.innerHTML='Download';
- var price=document.getElementById('price'); if(price)price.innerHTML=game.points+' Wii Points';
- var link=document.getElementById('BuyAnchor');
- if(link){
-  link.href='/wii-install/title/'+selected;
-  link.target='_self';
-  link.onclick=function(){try{wiiSelectSound();}catch(e){} shroomNavigate('/wii-install/title/'+selected);return false;};
+ // Parental Controls: hide the purchase/download button above the set level.
+ var pcA=(function(){var m=/(?:^|;\s*)shroomPC=([a-z0-9]+)/.exec(document.cookie);var l=m?m[1]:'';return l=='e'?6:l=='e10'?10:l=='t'?13:l=='m'?18:0;})();
+ var pcR=(function(r){r=String(r||'').toUpperCase();if(r=='E'||r=='EC')return 6;if(r=='E10')return 10;if(r=='T')return 13;if(r=='M')return 17;if(r=='AO')return 18;return 0;})(game.rating);
+ if(pcA&&pcR&&pcR>pcA){
+  var pcButton=document.getElementById('buyButton');if(pcButton)pcButton.style.display='none';
+  var pcMsg=document.getElementById('pcMsg');
+  if(!pcMsg){pcMsg=document.createElement('div');pcMsg.id='pcMsg';pcMsg.style.cssText='position:absolute;left:36px;top:230px;width:540px;height:200px;z-index:37;text-align:center;color:#323232;font-size:17px';document.body.appendChild(pcMsg);}
+  pcMsg.innerHTML='Parental Controls prevent this software from being downloaded.<br><br>Change the setting in Settings and Features.';
+  pcMsg.style.display='';
+  return;
  }
+ var unavailable=document.getElementById('notAvailableMsg');
+ if(game.notAvailable){
+  var hiddenButton=document.getElementById('buyButton');if(hiddenButton)hiddenButton.style.display='none';
+  if(unavailable)unavailable.style.display='';
+  return;
+ }
+ var isOnDevice=false;var isUpdate=false;
+ try{ if(typeof titleManager!='undefined'){ isOnDevice=!!titleManager.getIsOnDevice(); isUpdate=!!titleManager.isUpdate(); } }catch(e){}
+ try{ if(!isOnDevice){ var st=sessionStorage.getItem('shroomInstalled_'+selected); if(st){ isOnDevice=true; if(parseInt(st,10)!==gver) isUpdate=true; } } }catch(e){}
+ var button=document.getElementById('buyButton');
+ var downloaded=document.getElementById('downloadedMsg');
+ var caption=document.getElementById('text03-01');
+ var price=document.getElementById('price');
+ var link=document.getElementById('BuyAnchor');
+ if(isOnDevice && !isUpdate){
+  if(button)button.style.display='none';
+  if(downloaded)downloaded.style.display='';
+  if(price)price.innerHTML='';
+ } else {
+  if(button)button.style.display='';
+  if(downloaded)downloaded.style.display='none';
+  if(caption)caption.innerHTML=isUpdate?'Update':'Download';
+  if(price)price.innerHTML=game.points+' Wii Points';
+  if(link){ link.href='/wii-install/title/'+selected; link.target='_self'; link.onclick=function(){try{wiiSelectSound();}catch(e){} try{sessionStorage.setItem('shroomInstalled_'+selected,''+game.titleVersion);}catch(e){} shroomNavigate('/wii-install/title/'+selected);return false;}; }
+ }
+ if(isUpdate){ var ub=document.getElementById('updatedBadge'); if(!ub){ ub=document.createElement('div'); ub.id='updatedBadge'; ub.style.cssText='position:absolute;left:18px;top:9px;width:60px;height:18px;z-index:13;background:#c00;color:#fff;font-size:11px;font-weight:bold;text-align:center;line-height:18px;border-radius:2px;display:none;'; ub.innerHTML='Updated!'; var t=document.getElementById('Thumbnail'); if(t && t.parentNode) t.parentNode.insertBefore(ub,t); } if(ub)ub.style.display=''; }
  var control=document.getElementById('ControlAnchor');if(control){control.href='/controllers?titleId='+selected;control.onclick=function(){shroomNavigate(control.href);return false;};}
+ if(typeof setUnderButtonR==='function') setUnderButtonR(true,'More Details','javascript:showPage(\'B_06.html?titleId='+selected+'\')','wiiSelectSound()');
  var buyImage=document.getElementById('Image2');if(buyImage)buyImage.onclick=function(){try{wiiSelectSound();}catch(e){}};
  var ratingIds=['Rating','ESRB_Rating','RatingPic'];
  var esrb={'E':1,'E10':1,'T':1,'M':1,'EC':1,'AO':1,'RP':1};
@@ -609,6 +773,14 @@ func classicCatalogFallbackJS() []byte {
 var retries=0;
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function value(name){var q=location.search.substring(1).split('&');for(var i=0;i<q.length;i++){var p=q[i].split('=');if(decodeURIComponent(p[0])==name)return decodeURIComponent((p[1]||'').replace(/\+/g,' '));}return '';}
+// Parental Controls: the level is a cookie set in Settings and Features. The
+// same values drive ec.getDeviceInfo in the mock above, so the archived page
+// code agrees with the catalogue filter. A title rated above the level is not
+// shown, as on the real shop ("you may not be able to view all software").
+function pcLevel(){var m=/(?:^|;\s*)shroomPC=([a-z0-9]+)/.exec(document.cookie);return m?m[1]:'';}
+function pcAge(){var l=pcLevel();return l=='e'?6:l=='e10'?10:l=='t'?13:l=='m'?18:0;}
+function ratingAge(r){r=String(r||'').toUpperCase();if(r=='E'||r=='EC')return 6;if(r=='E10')return 10;if(r=='T')return 13;if(r=='M')return 17;if(r=='AO')return 18;return 0;}
+function pcAllowed(g){var a=pcAge();if(!a)return true;var r=ratingAge(g.rating);return !r||r<=a;}
 // The main menu's tiles link with the archived parameters (vc=true,
 // platform=WiiWare, platform=Wii Channels in each language); map them to sections.
 function section(){var c=value('category');if(c)return c;if(value('vc')=='true')return 'Virtual Console';var p=value('platform').toLowerCase();if(p.indexOf('wiiware')>=0)return 'WiiWare';if(p.indexOf('virtual')>=0)return 'Virtual Console';if(/channel|kanal|cha.ne|canal/.test(p))return 'Channels';return '';}
@@ -618,8 +790,12 @@ function nav(){
  var info=document.getElementById('listinfo');if(!info)return;
  var cur=section(),hb=value('hb')=='1',t;
  if(value('title'))t='Results for '+value('title');
- else if(hb)t=cur=='Virtual Console'?'Homebrew Emulators':'Homebrew Games';
+ else if(hb&&value('genre'))t=value('genre').charAt(0).toUpperCase()+value('genre').substring(1);
+ else if(hb&&value('popular')=='true')t='Popular Homebrew';
+ else if(hb&&value('order')=='new')t='Newest Homebrew';
+ else if(hb)t=cur=='Virtual Console'?'Homebrew Emulators':'Homebrew';
  else if(value('genre'))t=value('genre')=='flash'?'Flash':value('genre');
+ else if(/channel|kanal|cha.ne|canal/i.test(value('platform')))t='Wii Channels';
  else if(value('order')=='new')t='Newest Additions';
  else if(value('popular')=='true')t='Popular Titles';
  else if(value('publisher'))t=value('publisher');
@@ -635,7 +811,7 @@ function render(){
  // Console/WiiWare/DLC/Wii Channels. Homebrew shows only behind the
  // Homebrew tile of the VC (emulators) and WiiWare (games) choosers (hb=1).
  function inSection(g){
-  if(value('hb')=='1')return cat=='virtual console'?g=='emulators':g=='games';
+  if(value('hb')=='1')return cat=='virtual console'?g=='emulators':(g=='games'||g=='utilities'||g=='media'||g=='demos');
   if(cat)return g==cat;
   return true;
  }
@@ -656,13 +832,19 @@ function render(){
   if(title&&((game.title1||'')+' '+(game.title2||'')+' '+(game.publisher||'')).toLowerCase().indexOf(title)<0)continue;
   if(!matchGenre(game))continue;
   if(publisher&&String(game.publisher||'').toLowerCase().indexOf(publisher)<0)continue;
+  if(!pcAllowed(game))continue;
   list.push(game);
  }
  // A section lists its own licensed titles (the real Wii channels, the real
  // Virtual Console games) before the homebrew that shares it.
  function rank(g){var x=String(g.genre||'').toLowerCase();return x==cat?0:1;}
- if(value('order')=='new')list.sort(function(a,b){return (rank(a)-rank(b))||((b.releaseUnix||0)-(a.releaseUnix||0));});
- else if(genre)list.sort(function(a,b){return String(a.title1||'').toLowerCase()<String(b.title1||'').toLowerCase()?-1:1;});
+ function byTitle(a,b){return String(a.title1||'').toLowerCase()<String(b.title1||'').toLowerCase()?-1:1;}
+ // Popular Titles: most downloads first (counts from /shroombrew-popular.js).
+ var pop=window.shroomPopular||{};
+ function downloads(g){var l=String(g.link||'');return l.indexOf('/download/')==0?(pop[l.substring(10)]||0):0;}
+ if(value('popular')=='true')list.sort(function(a,b){return (downloads(b)-downloads(a))||byTitle(a,b);});
+ else if(value('order')=='new')list.sort(function(a,b){return (rank(a)-rank(b))||((b.releaseUnix||0)-(a.releaseUnix||0));});
+ else if(genre||title)list.sort(byTitle);
  else list.sort(function(a,b){var r=rank(a)-rank(b);if(r)return r;var g=String(a.genre||'').toLowerCase()<String(b.genre||'').toLowerCase()?-1:1;return g?g:(String(a.title1||'').toLowerCase()<String(b.title1||'').toLowerCase()?-1:1);});
  var pages=Math.max(1,Math.ceil(list.length/3));if(page>pages)page=pages;
  var first=(page-1)*3;var html='';
@@ -673,12 +855,17 @@ function render(){
   html+='<div style="overflow:hidden" nowrap id="TitleName1stline"><span class="catalogTitleBlack_01">'+esc(g.title1)+'</span></div>';
   html+='<div style="overflow:hidden" nowrap id="TitleName2stline"><span class="catalogTitleBlack_01">'+esc(g.title2)+'</span></div>';
   html+='<div id="ImageforCatalogpage"><img src="'+esc(icon)+'" width="96" height="72" style="background-color:white" /></div>';
-  html+='<div id="regularTitle"><div id="spacer"><a onclick="if(new Date().getTime()<shroomListReady)return false;shroomNavigate(this.href);return false" href="/oss/serv/B_05.html?titleId='+encodeURIComponent(g.id)+'"><img src="/oss/oss/common/images/spacer.gif" width="488" height="91" border="0" /></a></div><div id="points"><div align="right" class="catalogTitleBlackBold">'+esc(g.points)+' Points</div></div></div>';
+  if(g.isNew)html+='<div class="shroom-new" data-id="'+esc(g.id)+'" style="position:absolute;left:18px;top:9px;width:34px;height:14px;z-index:12"><img src="/oss/oss/common/images/banner/NEW_en.gif" width="34" height="14" border="0" /></div>';
+  // "Updated!" tab above the tile: the shop's own new_update.png outline with
+  // the blue word on top. Shown when an older version is installed.
+  if(g.titleVersion)html+='<div class="shroom-updated" data-id="'+esc(g.id)+'" data-ver="'+g.titleVersion+'" style="display:none;position:absolute;left:18px;top:-10px;width:150px;height:23px;z-index:14"><img src="/oss/oss/common/images/banner/new_update.png" width="150" height="23" style="position:absolute;left:0;top:0;border:0" /><span style="position:absolute;left:0;top:5px;width:150px;text-align:center;color:#34beed;font-size:11px;font-weight:bold">Updated!</span></div>';
+  html+='<div id="regularTitle"><div id="spacer"><a onclick="if(new Date().getTime()<shroomListReady)return false;shroomNavigate(this.href);return false" href="/oss/serv/B_05.html?titleId='+encodeURIComponent(g.id)+'"><img src="/oss/oss/common/images/spacer.gif" width="488" height="91" border="0" /></a></div><div id="points"><div align="right" class="catalogTitleBlackBold">'+(parseInt(g.points,10)===0?'Downloadable':esc(g.points)+' Wii Points')+'</div></div></div>';
   html+='<img src="/oss/oss/common/images/banner/B_04_softbanner_a.gif" width="488" height="91" border="0" /></div>';
  }
  // A press that opened this list must not also open the row now under the pointer.
  window.shroomListReady=new Date().getTime()+700;
- frame.innerHTML=html;frame.style.display='';frame.style.overflow='hidden';frame.style.left='60px';frame.style.width='488px';frame.style.background='white';frame.style.border='none';
+ frame.innerHTML=html;frame.style.display='';frame.style.overflow='visible';frame.style.left='60px';frame.style.width='488px';frame.style.background='white';frame.style.border='none';
+  try{var badges=frame.querySelectorAll('.shroom-updated');for(var bi=0;bi<badges.length;bi++){var b=badges[bi];var id=b.getAttribute('data-id');var ver=parseInt(b.getAttribute('data-ver'),10)||0;var st=sessionStorage.getItem('shroomInstalled_'+id);if(st!==null){var have=parseInt(st,10)||0;if(ver>have && ver>0){b.style.display='block';var nu=frame.querySelector('.shroom-new[data-id="'+id+'"]');if(nu)nu.style.display='none';}}}}catch(e){}
  var count=document.getElementById('pageNum');if(count)count.innerHTML=page+'/'+pages;
  var left=document.getElementById('backArrow');if(left){left.href=pageURL(page>1?page-1:1);left.onclick=function(){shroomNavigate(left.href);return false;};}
  var right=document.getElementById('nextArrow');if(right){right.href=pageURL(page<pages?page+1:pages);right.onclick=function(){shroomNavigate(right.href);return false;};}
@@ -727,6 +914,9 @@ func (s *storefront) serveShopIcon(w http.ResponseWriter, r *http.Request, slug 
 // homebrew uses the Open Shop Channel package mirror.
 func (s *storefront) downloadTarget(app catalogApp) (string, bool) {
 	if app.Licensed {
+		if strings.TrimSpace(app.URL.Zip) == "" {
+			return "", false
+		}
 		return app.URL.Zip, true
 	}
 	u, err := url.Parse(app.URL.Zip)
@@ -747,6 +937,10 @@ func (s *storefront) classicDownload(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		http.Error(w, "Download unavailable", http.StatusServiceUnavailable)
 		return
+	}
+	logDownload(r.Context(), app.Slug, "download")
+	if id, err := walletID(w, r); err == nil {
+		awardPlayPoints(r.Context(), id, app.Slug)
 	}
 	http.Redirect(w, r, target, http.StatusFound)
 }
@@ -880,6 +1074,9 @@ func (s *storefront) classicSiteHandler(soap http.Handler) http.Handler {
 		case "/shroombrew-navigation.js":
 			w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
 			w.Write(classicNavigationJS())
+			return
+		case "/shroombrew-popular.js":
+			popularScript(w, r)
 			return
 		case "/shroombrew-catalog.js":
 			w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
@@ -1028,11 +1225,20 @@ func (s *storefront) classicSiteHandler(soap http.Handler) http.Handler {
 			}
 
 			if strings.HasPrefix(filePath, "/oss/serv/") && strings.HasSuffix(filePath, ".html") {
+				// Mocks for Wii-only objects so the archived page scripts run in a
+				// browser: ec, wiiShop, catalogue lists and the shop's region
+				// setting (pages read parent.region / parent.showallgames from the
+				// shell that hosts them in an iframe).
+				mockScript := `<script>try{var ec={SupportsSession:function(){return false},getSessionValue:function(){return ''},getDeviceInfo:function(){var m=/(?:^|;\s*)shroomPC=([a-z0-9]+)/.exec(document.cookie);var lvl=m?m[1]:'';var age=lvl=='e'?6:lvl=='e10'?10:lvl=='t'?13:lvl=='m'?18:null;return {blockSize:16384,totalBlocks:2000,usedBlocks:0,freeBlocks:2000,region:'USA',language:'en',country:'US',isParentalControlEnabled:age!==null,userAge:age===null?20:age,netContentRestrictions:age===null?0:4};}};var wiiShop=function(){this.connecting='Connecting. Please wait...';this.endWaiting=function(){};this.setWallpaper=function(){};this.disableHRP=function(){};this.enableHRP=function(){};this.jumpToEULAViewer=function(){};this.jumpToManualChannel=function(){};this.returnToUpdate=function(){};this.returnToMenu=function(){};this.jumpDataMng=function(){};this.retry=function(){};this.beginWaiting=function(){};this.endWaiting=function(){};this.error=function(){};this.closeManual=function(){};};var ECPrice=function(){};var ECAccountPayment=function(){};var ECTitleLimits=function(){};var ecCheck=true;var buttonsCheck=true;var imagesCheck=true;var soundCheck=true;var errorCheck=true;var homedata=[[],[],[],[],[],[],[]];window.region='US';try{window.parent.region='US';window.parent.showallgames=false;window.parent.hidelinkedgames=false;}catch(e){}if(window.parent===window&&typeof window.keyboard!='function'){window.keyboard=function(input,message){var v=window.prompt(message||'','');if(v===null)return;input.value=v;if(typeof input.onchange=='function')input.onchange();};}}catch(e){}</script>`
+				text = strings.Replace(text, "<head>", "<head>"+mockScript, 1)
 				text = strings.Replace(text, "</body>", "<script type=\"text/javascript\" src=\"/shroombrew-navigation.js\"></script><script type=\"text/javascript\" src=\"/shroombrew-balance.js\"></script></body>", 1)
 			}
 			if filePath == "/oss/serv/B_04.html" {
-				// Use one catalog renderer on both engines. The imported renderer
-				// requires arrow functions and template literals absent in Wii Opera.
+				// Mocks for Wii-specific objects (ec, wiiShop, homedata, window.region)
+				// so the page's other inline scripts don't throw in a browser. One
+				// renderer everywhere: the ES3 catalog in shroombrew-catalog.js, so
+				// search, paging and the NEW/Updated badges look the same on the
+				// console and in a browser (the archived initPage needs Wii objects).
 				text = shopInlineScripts.ReplaceAllStringFunc(text, func(block string) string {
 					if strings.Contains(block, "function initPage()") && strings.Contains(block, "URLSearchParams") {
 						return `<script>function initPage(){shroomInstallBridge();if(typeof setUnderButtonL==='function')setUnderButtonL(true,'Back','javascript:showBack()','wiiCancelSound()');}</script>`
@@ -1040,13 +1246,20 @@ func (s *storefront) classicSiteHandler(soap http.Handler) http.Handler {
 					return block
 				})
 				text = strings.Replace(text, "</head>", "<style type=\"text/css\">#shroomWhatsNew{display:none!important}</style></head>", 1)
-				text = strings.Replace(text, "</body>", "<script type=\"text/javascript\" src=\"/shroombrew-catalog.js\"></script></body>", 1)
+				text = strings.Replace(text, "</body>", "<script type=\"text/javascript\" src=\"/shroombrew-popular.js\"></script><script type=\"text/javascript\" src=\"/shroombrew-catalog.js\"></script></body>", 1)
 			}
 			if filePath == "/oss/serv/W_01.html" {
 				text = strings.Replace(text, "</body>", "<script type=\"text/javascript\" src=\"/shroombrew-welcome.js\"></script></body>", 1)
 			}
 			if filePath == "/oss/serv/B_05.html" {
 				text = strings.Replace(text, "</body>", "<script type=\"text/javascript\" src=\"/shroombrew-detail.js\"></script></body>", 1)
+			}
+			if filePath == "/oss/serv/B_06.html" {
+				if id := strings.ToUpper(r.URL.Query().Get("titleId")); id != "" {
+					if app, ok := s.appByTitleID(id); ok {
+						text = classicMoreDetailsPage(text, app)
+					}
+				}
 			}
 			if strings.Contains(r.UserAgent(), "Wii Shop Channel/") || strings.Contains(r.UserAgent(), "Nintendo Wii") {
 				text = legacyWiiFrontend(text)
@@ -1056,6 +1269,8 @@ func (s *storefront) classicSiteHandler(soap http.Handler) http.Handler {
 				w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
 			} else {
 				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+				// Pages are rewritten per request; never let a browser keep an old copy.
+				w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 			}
 			if strings.HasSuffix(filePath, ".js") && isStaticShopAsset(filePath) {
 				// The body is rewritten per request, so tag the bytes actually sent.

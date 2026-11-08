@@ -129,6 +129,40 @@ var now = new Date();
 // #fxdate=YYYY-MM-DD previews a special day's music (and, via shroombrew-fx.js, its look).
 var fxdate = /fxdate=(\d{4})-(\d{2})-(\d{2})/.exec(location.hash);
 if (fxdate) now = new Date(+fxdate[1], +fxdate[2] - 1, +fxdate[3], 12);
+// Jan 30, the closing anniversary: the depressing version or the piano
+// tribute uploaded that day in 2019, one pick per browser tab.
+function shroomJan30() {
+  var v = null;
+  try { v = sessionStorage.getItem("shroomJan30"); } catch (e) {}
+  if (!v) {
+    v = Math.random() < 0.5 ? "theme1depressing" : "remix12";
+    try { sessionStorage.setItem("shroomJan30", v); } catch (e) {}
+  }
+  return v;
+}
+// The community remixes, one per fitting day (keep in step with shop/fx.js):
+// song name, upload date and the occasion it suits.
+var shroomRemixDays = {
+  "0-27": "remix15",  // Mozart's birthday: Orchestral Remix (Raymusique)
+  "0-31": "remix01",  // the day after the shop closed: Chill Lo-Fi Remix (2019-01-31)
+  "1-13": "remix16",  // Black Sabbath's first album, 1970: Synth/Metal Cover (Dacian Grada)
+  "2-10": "remix13",  // MAR10 Day: Luigi Time!!! (StacheBros)
+  "2-18": "remix06",  // Awkward Moments Day: the pauses are uncomfortably long
+  "2-20": "remix02",  // first day of spring: Nicky Flowers remix
+  "3-18": "remix05",  // Initial D first aired, 1998: Eurobeat Remix (Dominic Ninmark)
+  "3-30": "remix10",  // International Jazz Day: Smooth Jazz Guitar & Accordion (Dr. Pez)
+  "4-17": "remix08",  // Minecraft's first public release, 2009: Note Blocks (BlockFusion)
+  "4-18": "remix09",  // Shrek opened, 2001: Wii Theme but its All Star (Mr Rock)
+  "6-23": "remix14",  // Bardcore Tavern Cover upload day, summer 2020
+  "8-9": "remix11",   // Teddy Bear Day: Music Box (R3 Music Box)
+  "8-15": "remix07",  // Undertale released, 2015: Megalovania Edition (Ontopic)
+  "8-21": "remix04"   // the 21st night of September: Wii Theme but its September (Mr Rock)
+};
+// World Piano Day is the 88th day of the year, one day for each key.
+function shroomDayOfYear() {
+  return Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - new Date(now.getFullYear(), 0, 1)) / 86400000) + 1;
+}
+var shroomRemixToday = shroomDayOfYear() == 88 ? "remix03" : shroomRemixDays[now.getMonth() + "-" + now.getDate()];
 if (now.getMonth() == 3 && now.getDate() == 1) {
   document.title = "Wiizer Shop Channel";
   var theme1 = new Audio('snd/theme1deranged.mp3');
@@ -151,8 +185,8 @@ if (now.getMonth() == 3 && now.getDate() == 1) {
   theme1.loop = true;
   var theme2 = theme1;
 } else if (now.getMonth() == 0 && now.getDate() == 30) {
-  // Jan 30: "Wii Shop Channel but it's Depressing (RIP Wii Shop Channel)" — Wii Shop Channel closure anniversary.
-  var theme1 = new Audio('snd/theme1depressing.mp3');
+  // Jan 30: Wii Shop Channel closure anniversary.
+  var theme1 = new Audio('snd/' + shroomJan30() + '.mp3');
   theme1.loop = true;
   var theme2 = theme1;
 } else if (now.getMonth() == 1 && now.getDate() == 9) {
@@ -170,6 +204,25 @@ if (now.getMonth() == 3 && now.getDate() == 1) {
   var theme1 = new Audio('snd/theme1discordant.mp3');
   theme1.loop = true;
   var theme2 = theme1;
+} else if (shroomRemixToday) {
+  // One remix for the day, looped, chosen because of what it is and when it
+  // came out (see shroomRemixDays above).
+  var theme1 = new Audio('snd/' + shroomRemixToday + '.mp3');
+  theme1.loop = true;
+  var theme2 = theme1;
+} else if (now.getMonth() == 10 && now.getDate() == 19) {
+  // Nov 19: the Wii and its Shop Channel launched in 2006. Every remix in
+  // order, all day.
+  var theme1 = new Audio('snd/remix01.mp3');
+  var theme2 = theme1;
+  theme1.shroomAlbum = 1;
+  theme1.addEventListener("ended", function() {
+    var n = theme1.shroomAlbum % 16 + 1;
+    theme1.shroomAlbum = n;
+    theme1.src = 'snd/remix' + (n < 10 ? '0' : '') + n + '.mp3';
+    var p = theme1.play();
+    if (p !== undefined && p.catch) { p.catch(function(){}); }
+  });
 } else if(Math.random() < 0.01) {
   if (now.getDay() == 3) {
     var theme1 = new Audio('snd/theme1.mp3');
@@ -288,17 +341,15 @@ var content_finished_loading = function(iframe) {
       } else {
         gotolink = "B_05.html?titleId=" + queryString;
       }
-      document.getElementById("link").removeAttribute("href");
-      var landingMsg = iframe.contentWindow.document.getElementById("wiiMessage");
-      if (landingMsg) { landingMsg.innerHTML = "Connecting. Please wait..."; }
+      document.getElementById("link").href = "javascript:goto('" + gotolink + "')";
+      iframe.contentWindow.document.getElementById("wiiMessage").innerHTML = "Connecting. Please wait.";
       loading = true;
+      setTimeout(function(){ var l=document.getElementById("link"); if(l) l.click(); }, 1500);
       introplayed = false;
       theme1.pause();
       theme1.currentTime = 0;
       theme2.pause();
       theme2.currentTime = 0;
-      // Auto-enter the shop once the landing page has rendered.
-      setTimeout(function() { goto(gotolink); }, 900);
     }
   } else {
     if (iframe.contentWindow.location.href.includes("wiishopchannel.net/oss/serv/W_01")) {
@@ -671,6 +722,8 @@ function framecursormove(event) {
 
 // Checks when the first half of the music is done playing.
 theme1.addEventListener("ended", function() {
+  // The Nov 19 album advances itself; leave its position alone.
+  if (theme1.shroomAlbum) { return; }
   theme1.currentTime = 0;
   introplayed = true;
 });

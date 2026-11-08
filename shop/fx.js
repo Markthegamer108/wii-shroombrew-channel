@@ -1,14 +1,30 @@
 /* Shroombrew special days, shared by the web shop (shop.shroombrew.org) and
    the community site (shroombrew.org). Each day that has its own track also
    has its own look, in both places:
-     December      All I Want For Christmas Is You   falling snow
-     14 January    Mii Channel theme reversed        reversed text
-     30 January    Wii Shop Channel but Depressing   grey page and rain
-     9 February    Wii Shop Channel but it's ss      small-caps text, faded colour
-     1 April       wii theme but it is deranged      the page wobbles
-     5 May         made by a 6 year old              crayon colours, Comic Sans
-     26 June       Attentiion                        the page pulses on the beat
-     31 October    Mii Channel ... discordant        glitches that get worse
+     December      All I Want For Christmas Is You       falling snow
+     14 January    Mii Channel theme reversed            reversed text
+     27 January    Orchestral Remix (Mozart's birthday)  concert-hall lights
+     30 January    Depressing / Goodbye Wii Shop piano   grey page and rain
+     31 January    Chill Lo-Fi Remix                     faded lo-fi colour
+     9 February    Wii Shop Channel but it's ss          small-caps text, faded colour
+     13 February   Synth/Metal Cover (Black Sabbath)     dark, red edges
+     10 March      Luigi Time!!! (MAR10 Day)             falling coins
+     18 March      ...uncomfortably long pauses          the page stalls now and then
+     20 March      Nicky Flowers remix (spring)          falling petals
+     88th day      Charles Cornell piano cover           piano keys (World Piano Day)
+     1 April       wii theme but it is deranged          the page wobbles
+     18 April      Eurobeat Remix (Initial D, 1998)      speed lines
+     30 April      Smooth Jazz Guitar (Jazz Day)         smoky club lights
+     5 May         made by a 6 year old                  crayon colours, Comic Sans
+     17 May        Minecraft Note Blocks (2009)          falling music notes
+     18 May        Wii Theme but its All Star (Shrek)    swamp green
+     26 June       Attentiion                            the page pulses on the beat
+     23 July       Bardcore Tavern Cover                 parchment
+     9 September   Music Box (Teddy Bear Day)            soft colours, twinkles
+     15 September  Megalovania Edition (Undertale)       dark edges, the page shakes
+     21 September  Wii Theme but its September           disco colours
+     31 October    Mii Channel ... discordant            glitches that get worse
+     19 November   every remix (the Wii launched, 2006)  confetti
    An effect and its switch only exist on its day. shroombrew.org also plays
    the day's music and has dark mode; its settings sit behind the gear button.
    The shop's Settings > Seasonal Effects page (S_16_6) uses shroomFX.
@@ -30,6 +46,15 @@
   // frames in the shop (the shell scales #app itself, so leave that alone).
   var MOVE = ".wrap,#frame,#otherframe";
 
+  // A layer over the whole top page (never the frames, or it would stack).
+  function overlay(bg) {
+    return "html::after{content:\"\";position:fixed;left:0;top:0;right:0;bottom:0;pointer-events:none;z-index:2147482999;background:" + bg + "}";
+  }
+  var VIGNETTE = "radial-gradient(ellipse at center,rgba(0,0,0,0) 55%,";
+  function isDay(m, d) { return function () { return month === m && day === d; }; }
+  // World Piano Day is the 88th day of the year.
+  function dayOfYear() { return Math.round((new Date(now.getFullYear(), month, day) - new Date(now.getFullYear(), 0, 1)) / 86400000) + 1; }
+
   // ---- the special days ------------------------------------------------------
   // css goes into the top page; frameCss into every page, frames included.
   var EFFECTS = [
@@ -37,32 +62,89 @@
       when: function () { return month === 11; },
       start: function () { startParticles("snow"); }, stop: stopParticles },
     { name: "reverse", key: "r", label: "Reversed text", note: "For the reversed Mii Channel theme.",
-      when: function () { return month === 0 && day === 14; },
+      when: isDay(0, 14),
       start: startReverse, stop: stopReverse },
+    { name: "concert", key: "a", label: "Concert-hall lights", note: "Mozart's birthday, for the Orchestral Remix.",
+      when: isDay(0, 27),
+      css: "html{filter:sepia(.2) saturate(1.1)}" + overlay(VIGNETTE + "rgba(60,30,0,.35) 100%)") },
     { name: "gloom", key: "g", label: "Grey and rain", note: "30 January, the day the Wii Shop Channel closed.",
-      when: function () { return month === 0 && day === 30; },
+      when: isDay(0, 30),
       css: "html{filter:grayscale(1) brightness(.88)}",
       start: function () { startParticles("rain"); }, stop: stopParticles },
+    { name: "lofi", key: "b", label: "Lo-fi colours", note: "The day after the shop closed, for the Chill Lo-Fi Remix.",
+      when: isDay(0, 31),
+      css: "html{filter:sepia(.35) saturate(.8) contrast(.92) brightness(1.03)}" + overlay(VIGNETTE + "rgba(40,20,60,.3) 100%)") },
     { name: "smallcaps", key: "c", label: "ᴅᴇᴘʀᴇssɪɴɢ text", note: "For \"Wii Shop Channel but it's ss\".",
-      when: function () { return month === 1 && day === 9; },
+      when: isDay(1, 9),
       css: "html{filter:grayscale(.65)}",
       frameCss: "body,body *{font-variant:small-caps!important;text-transform:lowercase}" },
+    { name: "metal", key: "e", label: "Heavy metal", note: "Black Sabbath's first album came out on 13 February 1970.",
+      when: isDay(1, 13),
+      css: "html{filter:grayscale(.6) contrast(1.25)}" + overlay(VIGNETTE + "rgba(160,0,0,.45) 100%)") },
+    { name: "coins", key: "f", label: "Falling coins", note: "MAR10 Day, for \"Luigi Time!!!\".",
+      when: isDay(2, 10),
+      start: function () { startParticles("coins"); }, stop: stopParticles },
+    { name: "stall", key: "h", label: "Awkward pauses", note: "Awkward Moments Day, for the uncomfortably long pauses.",
+      when: isDay(2, 18),
+      css: "html.sb-stall{filter:grayscale(.5);cursor:wait}",
+      start: startStall, stop: stopStall },
+    { name: "petals", key: "i", label: "Falling petals", note: "The first day of spring, for the Nicky Flowers remix.",
+      when: isDay(2, 20),
+      start: function () { startParticles("petals"); }, stop: stopParticles },
+    { name: "piano", key: "j", label: "Piano keys", note: "World Piano Day (the 88th day of the year), for Charles Cornell's cover.",
+      when: function () { return dayOfYear() === 88; },
+      css: "html::after{content:\"\";position:fixed;left:0;right:0;bottom:0;height:22px;pointer-events:none;z-index:2147482999;" +
+        "background:linear-gradient(#fff,#e8e8e8);border-top:2px solid #222}" +
+        "html::before{content:\"\";position:fixed;left:0;right:0;bottom:8px;height:16px;pointer-events:none;z-index:2147483000;" +
+        "background:repeating-linear-gradient(90deg,transparent 0,transparent 14px,#222 14px,#222 22px,transparent 22px,transparent 32px,#222 32px,#222 40px,transparent 40px,transparent 70px)}" },
     { name: "wobble", key: "w", label: "Deranged wobble", note: "April Fools' Day, for \"wii theme but it is deranged\".",
-      when: function () { return month === 3 && day === 1; },
+      when: isDay(3, 1),
       css: "@keyframes sbWobble{0%,100%{transform:rotate(-1.2deg) skewX(1deg)}25%{transform:rotate(.8deg) skewY(-.6deg) scale(1.01)}50%{transform:rotate(1.4deg) skewX(-1.2deg)}75%{transform:rotate(-.6deg) skewY(.8deg) scale(.99)}}" +
         MOVE + "{animation:sbWobble 5s ease-in-out infinite;transform-origin:50% 50%}" },
+    { name: "speed", key: "l", label: "Speed lines", note: "Initial D first aired on 18 April 1998, for the Eurobeat Remix.",
+      when: isDay(3, 18),
+      start: function () { startParticles("speed"); }, stop: stopParticles },
+    { name: "jazz", key: "n", label: "Jazz-club lights", note: "International Jazz Day, for the Smooth Jazz cover.",
+      when: isDay(3, 30),
+      css: "html{filter:sepia(.3) saturate(1.15)}" + overlay(VIGNETTE + "rgba(20,10,40,.5) 100%)") },
     { name: "crayon", key: "k", label: "Crayon style", note: "Children's Day, for \"made by a 6 year old\".",
-      when: function () { return month === 4 && day === 5; },
+      when: isDay(4, 5),
       css: "html{filter:saturate(2.2) hue-rotate(-12deg) contrast(1.05)}",
       frameCss: "body,body *{font-family:\"Comic Sans MS\",\"Comic Neue\",\"Chalkboard SE\",\"Marker Felt\",cursive!important}" },
+    { name: "notes", key: "q", label: "Music notes", note: "Minecraft first came out on 17 May 2009, for the Note Block cover.",
+      when: isDay(4, 17),
+      start: function () { startParticles("notes"); }, stop: stopParticles },
+    { name: "swamp", key: "t", label: "Swamp green", note: "Shrek opened on 18 May 2001, for \"Wii Theme but its All Star\".",
+      when: isDay(4, 18),
+      css: "html{filter:sepia(.25) hue-rotate(45deg) saturate(1.25)}" },
     { name: "pulse", key: "p", label: "Beat pulse", note: "For \"Attentiion\" (Wii Shop x Charlie Puth).",
-      when: function () { return month === 5 && day === 26; },
+      when: isDay(5, 26),
       css: "@keyframes sbPulse{0%,100%{transform:scale(1)}12%{transform:scale(1.015)}}" +
         MOVE + "{animation:sbPulse .61s ease-out infinite;transform-origin:50% 50%}" },
+    { name: "parchment", key: "u", label: "Parchment", note: "For the Bardcore Tavern Cover, uploaded on 23 July 2020.",
+      when: isDay(6, 23),
+      css: "html{filter:sepia(.55) contrast(.95)}" + overlay(VIGNETTE + "rgba(90,50,10,.4) 100%)") },
+    { name: "twinkle", key: "v", label: "Music-box twinkles", note: "Teddy Bear Day, for the Music Box version.",
+      when: isDay(8, 9),
+      css: "html{filter:saturate(.75) brightness(1.04)}",
+      start: function () { startParticles("sparkles"); }, stop: stopParticles },
+    { name: "shake", key: "y", label: "Screen shake", note: "Undertale came out on 15 September 2015, for the Megalovania Edition.",
+      when: isDay(8, 15),
+      css: overlay(VIGNETTE + "rgba(0,0,0,.55) 100%)") +
+        "@keyframes sbShake{0%,100%{transform:translate(0,0)}20%{transform:translate(-6px,2px)}40%{transform:translate(5px,-3px)}60%{transform:translate(-4px,-2px)}80%{transform:translate(3px,3px)}}" +
+        "html.sb-shake " + MOVE.split(",").join(",html.sb-shake ") + "{animation:sbShake .35s linear 2}",
+      start: startShake, stop: stopShake },
+    { name: "disco", key: "z", label: "Disco colours", note: "Do you remember the 21st night of September?",
+      when: isDay(8, 21),
+      css: "@keyframes sbDisco{0%,100%{filter:hue-rotate(0deg) saturate(1.2)}50%{filter:hue-rotate(35deg) saturate(1.5)}}html{animation:sbDisco 4s ease-in-out infinite}",
+      start: function () { startParticles("sparkles"); }, stop: stopParticles },
     { name: "glitch", key: "x", label: "Glitches", note: "Halloween, for the discordant Mii Channel music.",
-      when: function () { return month === 9 && day === 31; },
+      when: isDay(9, 31),
       css: MOVE + "{transform:translate(var(--sbgx,0),var(--sbgy,0)) skewX(var(--sbgs,0deg));filter:hue-rotate(var(--sbgh,0deg)) invert(var(--sbgi,0))}",
-      start: startGlitch, stop: stopGlitch }
+      start: startGlitch, stop: stopGlitch },
+    { name: "confetti", key: "o", label: "Confetti", note: "The Wii and the Wii Shop Channel launched on 19 November 2006. Every remix plays today.",
+      when: isDay(10, 19),
+      start: function () { startParticles("confetti"); }, stop: stopParticles }
   ];
   function todays() {
     var out = [];
@@ -89,16 +171,41 @@
     apply();
   }
 
-  // ---- today's track (keep in step with main.js) ---------------------------
+  // ---- today's track (keep in step with the shop's main.js) -----------------
+  var REMIX_DAYS = {
+    "0-27": "remix15", "0-31": "remix01", "1-13": "remix16", "2-10": "remix13",
+    "2-18": "remix06", "2-20": "remix02", "3-18": "remix05", "3-30": "remix10",
+    "4-17": "remix08", "4-18": "remix09", "6-23": "remix14", "8-9": "remix11",
+    "8-15": "remix07", "8-21": "remix04"
+  };
+  // Jan 30 is the shop's closing anniversary. It plays the old depressing
+  // track or the piano tribute uploaded that day, one choice per browser tab.
+  function jan30() {
+    var key = "sbfxJan30", v = null;
+    try { v = sessionStorage.getItem(key); } catch (e) {}
+    if (!v) {
+      v = Math.random() < 0.5 ? "theme1depressing" : "remix12";
+      try { sessionStorage.setItem(key, v); } catch (e) {}
+    }
+    return v;
+  }
   function track() {
     if (month === 3 && day === 1) return ["theme1deranged"];
     if (month === 11) return ["theme1christmas"];
     if (month === 5 && day === 26) return ["theme1attention"];
     if (month === 0 && day === 14) return ["theme1reversed"];
-    if (month === 0 && day === 30) return ["theme1depressing"];
+    if (month === 0 && day === 30) return [jan30()];
     if (month === 1 && day === 9) return ["theme1ss"];
     if (month === 4 && day === 5) return ["theme1sixyearold"];
     if (month === 9 && day === 31) return ["theme1discordant"];
+    if (dayOfYear() === 88) return ["remix03"];
+    if (REMIX_DAYS[month + "-" + day]) return [REMIX_DAYS[month + "-" + day]];
+    if (month === 10 && day === 19) {
+      var album = [];
+      for (var i = 1; i <= 16; i++) album.push("remix" + (i < 10 ? "0" : "") + i);
+      return album;
+    }
+    // The intro plays once, then the loop repeats, as in the shop.
     return ["theme1", "theme2"];
   }
   function today() {
@@ -144,50 +251,93 @@
     try { hookDoc(f.contentDocument); } catch (e) {}
   }
 
-  // ---- falling snow / rain ---------------------------------------------------
-  var pCanvas = null, pTimer = null, parts = [];
+  // ---- falling things -------------------------------------------------------
+  // One canvas over the page. Each kind sets how many there are, how they move
+  // and how one is drawn.
+  var pCanvas = null, pTimer = null, parts = [], coinImgs = null;
+  var CONFETTI = ["#34beed", "#f5c400", "#e8445a", "#4cc46e", "#a65fd8"];
+  var KINDS = {
+    snow: { per: 12000, max: 90, v: [0.0008, 0.0018], r: [1, 3] },
+    rain: { per: 9000, max: 120, v: [0.012, 0.022], r: [1, 3] },
+    coins: { per: 30000, max: 30, v: [0.002, 0.004], r: [0, 0] },
+    petals: { per: 20000, max: 45, v: [0.0012, 0.0026], r: [4, 7] },
+    notes: { per: 22000, max: 40, v: [0.0015, 0.003], r: [14, 22] },
+    confetti: { per: 9000, max: 110, v: [0.002, 0.005], r: [3, 6] },
+    sparkles: { per: 15000, max: 60, v: [0, 0], r: [1, 2.5] },
+    speed: { per: 14000, max: 50, v: [0.02, 0.045], r: [40, 140] }
+  };
+  function draw(ctx, mode, f, w, h, dark, tick) {
+    var x = f.x * w, y = f.y * h;
+    if (mode === "rain") {
+      ctx.strokeStyle = dark ? "rgba(200,215,225,0.5)" : "rgba(40,50,60,0.45)";
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 2, y + 8 + f.r * 3); ctx.stroke();
+    } else if (mode === "coins") {
+      var img = coinImgs[(Math.floor(tick / 4) + f.c) % 4];
+      if (img.complete && img.width) ctx.drawImage(img, x + Math.sin(f.d) * 6, y, 12, 21);
+    } else if (mode === "petals") {
+      ctx.save(); ctx.translate(x + Math.sin(f.d) * 18, y); ctx.rotate(f.d);
+      ctx.fillStyle = "rgba(246,170,200,0.85)";
+      ctx.beginPath(); ctx.ellipse(0, 0, f.r, f.r / 2, 0, 0, 6.283); ctx.fill(); ctx.restore();
+    } else if (mode === "notes") {
+      ctx.fillStyle = dark ? "rgba(95,208,245,0.8)" : "rgba(52,190,237,0.8)";
+      ctx.font = Math.round(f.r) + "px Arial,sans-serif";
+      ctx.fillText(f.c % 2 ? "\u266B" : "\u266A", x + Math.sin(f.d) * 10, y);
+    } else if (mode === "confetti") {
+      ctx.save(); ctx.translate(x + Math.sin(f.d) * 12, y); ctx.rotate(f.d * 2);
+      ctx.fillStyle = CONFETTI[f.c % CONFETTI.length];
+      ctx.fillRect(-f.r, -f.r / 2, f.r * 2, f.r); ctx.restore();
+    } else if (mode === "sparkles") {
+      ctx.fillStyle = "rgba(255,240,170," + (0.25 + 0.65 * Math.abs(Math.sin(f.d))).toFixed(2) + ")";
+      ctx.beginPath(); ctx.arc(x, y, f.r, 0, 6.283); ctx.fill();
+    } else if (mode === "speed") {
+      ctx.strokeStyle = dark ? "rgba(255,255,255,0.35)" : "rgba(52,190,237,0.35)";
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + f.r, y); ctx.stroke();
+    } else {
+      // Snow: black flakes on light pages, white ones in dark mode.
+      ctx.fillStyle = dark ? "rgba(255,255,255,0.9)" : "rgba(0,0,0,0.75)";
+      ctx.beginPath(); ctx.arc(x + Math.sin(f.d) * 0.01 * w, y, f.r, 0, 6.283); ctx.fill();
+    }
+  }
   function startParticles(mode) {
     if (pCanvas || !document.body) return;
+    var kind = KINDS[mode];
+    if (mode === "coins" && !coinImgs) {
+      coinImgs = [];
+      for (var c = 1; c <= 4; c++) { var im = new Image(); im.src = base + "/archive-shop/assets/anim/coin" + c + ".png"; coinImgs.push(im); }
+    }
     pCanvas = document.createElement("canvas");
     pCanvas.setAttribute("aria-hidden", "true");
     pCanvas.style.cssText = "position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:2147483000";
     document.body.appendChild(pCanvas);
-    var ctx = pCanvas.getContext("2d"), w = 0, h = 0, rain = mode === "rain";
-    // Phones get fewer flakes than tablets and desktops, and the canvas is
-    // only resized when the screen changes (rotation, resizing).
+    var ctx = pCanvas.getContext("2d"), w = 0, h = 0, tick = 0;
+    // Phones get fewer than tablets and desktops, and the canvas is only
+    // resized when the screen changes (rotation, resizing).
     function size() { w = pCanvas.width = window.innerWidth; h = pCanvas.height = window.innerHeight; }
     size();
     pCanvas.__sbResize = size;
     window.addEventListener("resize", size);
-    var count = Math.max(30, Math.min(rain ? 120 : 90, Math.round(w * h / (rain ? 9000 : 12000))));
+    var count = Math.max(12, Math.min(kind.max, Math.round(w * h / kind.per)));
+    function rnd(a) { return a[0] + Math.random() * (a[1] - a[0]); }
     parts = [];
-    for (var i = 0; i < count; i++) parts.push({ x: Math.random(), y: Math.random(), r: 1 + Math.random() * 3, v: rain ? 0.012 + Math.random() * 0.01 : 0.0008 + Math.random() * 0.0018, d: Math.random() * 6.28 });
+    for (var i = 0; i < count; i++) parts.push({ x: Math.random(), y: Math.random(), r: rnd(kind.r), v: rnd(kind.v), d: Math.random() * 6.28, c: i });
     pTimer = setInterval(function () {
       if (document.hidden) return; // no work while the tab is in the background
+      tick++;
       ctx.clearRect(0, 0, w, h);
+      ctx.lineWidth = mode === "speed" ? 2 : 1;
       var dark = /(^|\s)sb-dark(\s|$)/.test(document.documentElement.className);
-      if (rain) {
-        ctx.strokeStyle = dark ? "rgba(200,215,225,0.5)" : "rgba(40,50,60,0.45)";
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-      } else {
-        // Black flakes on light pages, white ones in dark mode.
-        ctx.fillStyle = dark ? "rgba(255,255,255,0.9)" : "rgba(0,0,0,0.75)";
-      }
       for (var j = 0; j < parts.length; j++) {
         var f = parts[j];
-        f.y += f.v; f.d += 0.02;
-        if (f.y > 1.02) { f.y = -0.02; f.x = Math.random(); }
-        if (rain) {
-          ctx.moveTo(f.x * w, f.y * h);
-          ctx.lineTo(f.x * w - 2, f.y * h + 8 + f.r * 3);
+        f.d += mode === "sparkles" ? 0.05 : 0.02;
+        if (mode === "speed") {
+          f.x -= f.v;
+          if (f.x < -0.3) { f.x = 1.05; f.y = Math.random(); }
         } else {
-          ctx.beginPath();
-          ctx.arc((f.x + Math.sin(f.d) * 0.01) * w, f.y * h, f.r, 0, 6.283);
-          ctx.fill();
+          f.y += f.v;
+          if (f.y > 1.02) { f.y = -0.04; f.x = Math.random(); }
         }
+        draw(ctx, mode, f, w, h, dark, tick);
       }
-      if (rain) ctx.stroke();
     }, 33);
   }
   function stopParticles() {
@@ -198,6 +348,28 @@
     pCanvas = null;
   }
 
+  // ---- class toggled now and then (awkward pauses, Megalovania shake) --------
+  function every(cls, holdMs, gapMs) {
+    var timer = null, root = document.documentElement;
+    function off() { root.className = root.className.replace(new RegExp("(^|\\s)" + cls + "(\\s|$)", "g"), " ").replace(/^\s+|\s+$/g, ""); }
+    return {
+      start: function () {
+        if (timer) return;
+        (function next() {
+          timer = setTimeout(function () {
+            if (!document.hidden) { root.className += " " + cls; setTimeout(off, holdMs); }
+            next();
+          }, gapMs * (0.6 + Math.random() * 0.8));
+        })();
+      },
+      stop: function () { clearTimeout(timer); timer = null; off(); }
+    };
+  }
+  var stall = every("sb-stall", 1800, 9000), shake = every("sb-shake", 700, 7000);
+  function startStall() { stall.start(); }
+  function stopStall() { stall.stop(); }
+  function startShake() { shake.start(); }
+  function stopShake() { shake.stop(); }
   // ---- Halloween glitches ----------------------------------------------------
   // Rare and small at first, more often and harsher the longer the page is
   // open ("insidiously gets discordant").
@@ -305,7 +477,8 @@
       if (saved && saved.i < list.length) audioIndex = saved.i;
       audio = new Audio(base + "/snd/" + list[audioIndex] + ".mp3");
       audio.volume = 0.35;
-      audio.loop = list.length === 1 || audioIndex === 1;
+      // theme2 is the shop's loop; one-track days loop their song.
+      audio.loop = list.length === 1 || list[audioIndex] === "theme2";
       if (saved) {
         // Add the moments spent loading this page so the beat lines up.
         var resumeAt = saved.t + (saved.playing ? (new Date().getTime() - saved.at) / 1000 : 0);
@@ -318,13 +491,14 @@
       setInterval(savePosition, 1000);
       window.addEventListener("pagehide", savePosition);
       audio.addEventListener("ended", function () {
-        // The intro plays once, then the loop repeats, as in the shop.
-        if (list.length > 1 && audioIndex === 0) {
-          audioIndex = 1;
-          audio.src = base + "/snd/" + list[1] + ".mp3";
-          audio.loop = true;
-          audio.play();
-        }
+        // theme1 then theme2 on repeat, as in the shop; the Nov 19 album goes
+        // round from the first song. One-track days loop by themselves.
+        if (list.length < 2) return;
+        audioIndex = audioIndex + 1 < list.length ? audioIndex + 1 : (list[0] === "theme1" ? 1 : 0);
+        audio.src = base + "/snd/" + list[audioIndex] + ".mp3";
+        audio.loop = list[audioIndex] === "theme2";
+        var p = audio.play();
+        if (p && p["catch"]) p["catch"](function () {});
       });
     }
     // Plays straight away when the browser allows it (Chrome does once the

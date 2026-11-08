@@ -86,16 +86,20 @@ func channelPackageMatches(app catalogApp, m channelpkg.Manifest) bool {
 // counted in the Wii's 16 KiB filesystem blocks. The confirmation page shows
 // it in 128 KiB Wii blocks, like the original shop.
 func (s *storefront) channelFSBlocks(app catalogApp) int {
-	m, err := channelpkg.Load(s.channelsRoot, strings.ToLower(classicTitleIDForApp(app)))
-	if err != nil {
-		return 0
-	}
-	names := append([]string{"tmd", "ticket.bin"}, m.Contents...)
 	var total int64
-	for _, name := range names {
-		if st, err := os.Stat(filepath.Join(s.channelsRoot, m.TitleID, name)); err == nil {
-			total += st.Size()
+	if m, err := channelpkg.Load(s.channelsRoot, strings.ToLower(classicTitleIDForApp(app))); err == nil {
+		names := append([]string{"tmd", "ticket.bin"}, m.Contents...)
+		for _, name := range names {
+			if st, err := os.Stat(filepath.Join(s.channelsRoot, m.TitleID, name)); err == nil {
+				total += st.Size()
+			}
 		}
+	}
+	// A channel that is only in the catalogue (icons imported, WAD on the
+	// external host) still has a real size there. Use it so the confirmation
+	// and download screens show the true block count instead of 0.
+	if total <= 0 {
+		total = app.Size
 	}
 	if total <= 0 {
 		return 0

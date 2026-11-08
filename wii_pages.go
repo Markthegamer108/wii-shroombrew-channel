@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -435,6 +436,7 @@ func (s *storefront) featureInfo(w http.ResponseWriter, r *http.Request) {
 		content = uiMenu("/friends", "connect", tl(lang, "f_title")) + uiMenu("/link", "keys", tl(lang, "l_title")) +
 			`<h2>` + esc(tl(lang, "w_music")) + `</h2><p>` + music(true, "w_music_on", "w_music_enabled") + music(false, "w_music_off", "w_music_muted") + `</p>` +
 			`<p id="settingStatus" class="small">` + esc(tl(lang, "w_settings_note")) + `</p>` +
+			`<h2>Parental Controls</h2>` + parentalOptions(r) +
 			`<h2>` + esc(tl(lang, "w_lang_label")) + `</h2><p>` + uiButton("/language", wiiLangLabel(lang)) + `</p>`
 	case "/activity", "/downloaded":
 		title = tl(lang, "w_activity_title")
@@ -458,6 +460,39 @@ func (s *storefront) featureInfo(w http.ResponseWriter, r *http.Request) {
 		content += `<p class="small">` + esc(tl(lang, "ft_credit")) + ` <a href="/source/shroombrew-source.tar.gz">Server source</a>.</p>`
 	}
 	writeShopPage(w, title, panel+content+`</div>`+shopFootT(lang, back))
+}
+
+// ParentalControls levels as a row of links. The chosen level lives in the
+// shroomPC cookie; the catalogue and detail pages read the same cookie, and the
+// ec mock reports it through getDeviceInfo so the archived shop code agrees.
+func parentalOptions(r *http.Request) string {
+	level := "off"
+	if c, err := r.Cookie("shroomPC"); err == nil {
+		level = c.Value
+	}
+	opt := func(value, label string) string {
+		mark := ""
+		if level == value {
+			mark = " &#10003;"
+		}
+		return `<a class="opt" href="/settings/pc/` + value + `">` + label + mark + `</a> `
+	}
+	out := `<p>` + opt("off", "Off") + opt("e", "Everyone") + opt("e10", "Everyone 10+") + opt("t", "Teen") + opt("m", "Mature") + `</p>`
+	out += `<p class="small">Titles rated above the level are hidden from the catalogue and cannot be downloaded.</p>`
+	return out
+}
+
+// parentalPage stores the level picked in Settings and goes back there.
+func (s *storefront) parentalPage(w http.ResponseWriter, r *http.Request) {
+	level := path.Base(r.URL.Path)
+	switch level {
+	case "off", "e", "e10", "t", "m":
+	default:
+		http.NotFound(w, r)
+		return
+	}
+	http.SetCookie(w, &http.Cookie{Name: "shroomPC", Value: level, Path: "/", MaxAge: 31536000, SameSite: http.SameSiteLaxMode})
+	http.Redirect(w, r, "/settings", http.StatusSeeOther)
 }
 
 // activityRows lists purchases. Account Activity is the original H_01 table

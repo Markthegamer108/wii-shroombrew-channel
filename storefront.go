@@ -74,6 +74,9 @@ type catalogApp struct {
 	Players         string   `json:"players,omitempty"`
 	// Size is the real title's size in bytes when the catalog knows it.
 	Size int64 `json:"size,omitempty"`
+	// Added is when the title joined Shroombrew, in Unix seconds. Recent
+	// additions wear the shop's golden NEW badge for 30 days.
+	Added int64 `json:"added,omitempty"`
 	// Variants lists every region-locked release of a collapsed licensed title
 	// (Europe/USA/Japan/Korea/...). The console's region selects which one the
 	// native download imports, so one catalog row serves the right WAD for any
