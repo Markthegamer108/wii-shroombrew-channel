@@ -1421,6 +1421,21 @@ func (s *storefront) classicSiteHandler(soap http.Handler) http.Handler {
 			}
 			text = strings.ReplaceAll(text, "top_L_arrow_S.png", "top_L_arrow_00.png")
 			text = strings.ReplaceAll(text, "top_R_arrow_S.png", "top_R_arrow_00.png")
+			if filePath == "/oss/serv/index.html" && isWiiClient(r) {
+				// The captured F_01 page had its initPage commented out for the
+				// desktop mock. On a console, drive the native wiiShop object and
+				// continue into CheckRegistered, as the original channel did.
+				text = strings.Replace(text, "</body>", `<script type="text/javascript">
+function initPage(){
+  var shop=new wiiShop();
+  var t=document.getElementById("wiiTitle");if(shop&&t)t.innerHTML=shop.title;
+  var m=document.getElementById("wiiMessage");if(shop&&m)m.innerHTML=shop.connecting;
+  try{if(shop&&"beginWaiting" in shop)shop.beginWaiting();}catch(e){}
+  try{if(shop&&"disableHRP" in shop)shop.disableHRP();}catch(e){}
+  showCheckRegistered();
+}
+</script></body>`, 1)
+			}
 			if strings.HasSuffix(filePath, ".html") {
 				text = strings.Replace(text, "<head>", "<head><script src=\""+compatURL+"\"></script>", 1)
 			}
