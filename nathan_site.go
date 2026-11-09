@@ -956,7 +956,7 @@ function section(){var c=value('category');if(c)return c;if(value('vc')=='true')
 // B_03's console banners pass a specific platform name (NES, Nintendo 64,
 // ...), not a section. Keep those lists on that console instead of falling
 // back to the whole catalogue.
-function consoleFilter(p){return /^(nes|super nes|nintendo 64|turbografx16|sega genesis|neogeo|master system|virtual console arcade|commodore 64|msx)$/i.test(p);}
+function consoleFilter(p){return /^(nes|super nes|nintendo 64|turbografx-?16|sega genesis|neo ?geo|master system|virtual console arcade|commodore 64|msx|dlc|homebrew)$/i.test(p);}
 function pageURL(number){var old=location.search.substring(1).split('&');var kept=[];for(var j=0;j<old.length;j++){if(old[j]&&old[j].split('=')[0]!='p')kept.push(old[j]);}kept.push('p='+number);return '/oss/serv/B_04.html?'+kept.join('&');}
 // The list's heading, as on the original page: one plain title, no links.
 function nav(){
