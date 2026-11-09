@@ -20,38 +20,41 @@ package main
 import (
 	"bufio"
 	"crypto/md5"
+	cryptorand "crypto/rand"
+	"crypto/subtle"
 	"errors"
 	"fmt"
 	wiino "github.com/RiiConnect24/wiino/golang"
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v4"
 	"log"
-	"math/rand"
+	"math/big"
 	"os"
 	"slices"
 	"strconv"
 	"strings"
 )
 
-// registrationCountry returns the console's own country. The upstream server
-// hard-coded "DE", which made US/JP consoles see an account-country mismatch
-// and loop back to the country-change page after registering.
 // syncTokenMatches accepts the raw token, ST-raw, or WT-md5 forms used by
 // different EC client paths.
 func syncTokenMatches(requestToken, storedToken string) bool {
-	if requestToken == storedToken {
+	if subtle.ConstantTimeCompare([]byte(requestToken), []byte(storedToken)) == 1 {
 		return true
 	}
-	if strings.HasPrefix(requestToken, "ST-") && strings.TrimPrefix(requestToken, "ST-") == storedToken {
+	if strings.HasPrefix(requestToken, "ST-") &&
+		subtle.ConstantTimeCompare([]byte(strings.TrimPrefix(requestToken, "ST-")), []byte(storedToken)) == 1 {
 		return true
 	}
 	if strings.HasPrefix(requestToken, "WT-") {
 		sum := fmt.Sprintf("%x", md5.Sum([]byte(storedToken)))
-		return strings.TrimPrefix(requestToken, "WT-") == sum
+		return subtle.ConstantTimeCompare([]byte(strings.TrimPrefix(requestToken, "WT-")), []byte(sum)) == 1
 	}
 	return false
 }
 
+// registrationCountry returns the console's own country. The upstream server
+// hard-coded "DE", which made US/JP consoles see an account-country mismatch
+// and loop back to the country-change page after registering.
 func registrationCountry(e *Envelope) string {
 	if c := strings.TrimSpace(e.Country()); c != "" {
 		return c
@@ -211,6 +214,16 @@ func syncRegistration(e *Envelope) {
 	e.AddKVNode("DeviceStatus", "R")
 }
 
+// newAccountID returns a random nine-digit account identifier. Account IDs
+// address wallets, so they must be as unpredictable as the device token.
+func newAccountID() (int64, error) {
+	n, err := cryptorand.Int(cryptorand.Reader, big.NewInt(900000000))
+	if err != nil {
+		return 0, err
+	}
+	return n.Int64() + 100000000, nil
+}
+
 func register(e *Envelope) {
 	deviceCode, err := e.getKey("DeviceCode")
 	if err != nil {
@@ -250,39 +263,57 @@ func register(e *Envelope) {
 		return
 	}
 
-	// Generate a random 9-digit number, padding zeros as necessary.
-	accountId := rand.Int63n(999999999)
-
 	// Generate a device token, 21 characters...
 	deviceToken := RandString(21)
 	// ...and then its md5, because the Wii sends this for most requests.
 	md5DeviceToken := fmt.Sprintf("%x", md5.Sum([]byte(deviceToken)))
 
-	// Insert all of our obtained values to the database...
-	_, err = pool.Exec(ctx, PrepareUserStatement, e.DeviceId(), deviceToken, md5DeviceToken, accountId, e.Region(), serialNo)
-	if err != nil {
-		// It's okay if this isn't a PostgreSQL error, as perhaps other issues have come in.
-		if driverErr, ok := err.(*pgconn.PgError); ok {
-			if driverErr.Code == "23505" {
-				// A console whose ec.cfg was lost asks to register again. Give
-				// it the account and token it already owns instead of leaving
-				// it stuck on ErrorCode 7.
-				var existingAccount int64
-				var existingToken string
-				if qerr := pool.QueryRow(ctx, `SELECT account_id, device_token FROM userbase WHERE device_id=$1`, e.DeviceId()).Scan(&existingAccount, &existingToken); qerr == nil {
-					e.AddKVNode("AccountId", strconv.FormatInt(existingAccount, 10))
-					e.AddKVNode("DeviceToken", existingToken)
-					e.AddKVNode("DeviceTokenExpired", "false")
-					e.AddKVNode("Country", registrationCountry(e))
-					e.AddKVNode("ExtAccountId", "")
-					e.AddKVNode("DeviceCode", deviceCode)
+	var accountId int64
+	var insertErr error
+	for attempt := 0; attempt < 4; attempt++ {
+		accountId, insertErr = newAccountID()
+		if insertErr != nil {
+			log.Printf("error generating account ID: %v\n", insertErr)
+			e.Error(7, "server-side error", insertErr)
+			return
+		}
+
+		// Insert all of our obtained values to the database...
+		_, insertErr = pool.Exec(ctx, PrepareUserStatement, e.DeviceId(), deviceToken, md5DeviceToken, accountId, e.Region(), serialNo)
+		if insertErr == nil {
+			break
+		}
+
+		var driverErr *pgconn.PgError
+		if errors.As(insertErr, &driverErr) && driverErr.Code == "23505" {
+			// A console whose ec.cfg was lost asks to register again. Give it
+			// the account and token it already owns, but only to the console
+			// that owns the stored serial number. A device ID alone must not
+			// disclose a reusable ECS credential.
+			var existingAccount int64
+			var existingToken, existingSerial string
+			qerr := pool.QueryRow(ctx, `SELECT account_id, device_token, serial_number FROM userbase WHERE device_id=$1 AND region=$2`, e.DeviceId(), e.Region()).Scan(&existingAccount, &existingToken, &existingSerial)
+			if qerr == nil {
+				if existingSerial != serialNo {
+					e.Error(7, "serial number does not match this console", errors.New("device ID is registered to a different serial number"))
 					return
 				}
-				e.Error(7, "database error", errors.New("user already exists"))
+				e.AddKVNode("AccountId", strconv.FormatInt(existingAccount, 10))
+				e.AddKVNode("DeviceToken", existingToken)
+				e.AddKVNode("DeviceTokenExpired", "false")
+				e.AddKVNode("Country", registrationCountry(e))
+				e.AddKVNode("ExtAccountId", "")
+				e.AddKVNode("DeviceCode", deviceCode)
 				return
 			}
+			// No row for this device ID: the collision was on the account ID.
+			// Generate a new one and retry.
+			continue
 		}
-		log.Printf("error executing statement: %v\n", err)
+		break
+	}
+	if insertErr != nil {
+		log.Printf("error executing statement: %v\n", insertErr)
 		e.Error(7, "database error", errors.New("failed to execute db operation"))
 		return
 	}

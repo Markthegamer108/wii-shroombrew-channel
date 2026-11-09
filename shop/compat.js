@@ -9,14 +9,36 @@ if (typeof window.trace !== 'function') window.trace = function() {};
 // and the throw stopped page setup after the first button.
 if (typeof String.prototype.includes !== 'function') String.prototype.includes = function(s, from) { return this.indexOf(s, from || 0) !== -1; };
 if (typeof String.prototype.startsWith !== 'function') String.prototype.startsWith = function(s, from) { return this.indexOf(s, from || 0) === 0; };
-if (typeof Array.prototype.indexOf !== 'function') Array.prototype.indexOf = function(s, from) {
-  for (var i = from || 0; i < this.length; i++) if (this[i] === s) return i;
-  return -1;
-};
-if (typeof Array.prototype.includes !== 'function') Array.prototype.includes = function(s, from) {
-  for (var i = from || 0; i < this.length; i++) if (this[i] === s) return true;
-  return false;
-};
+if (typeof Array.prototype.indexOf !== 'function') {
+  var shroomArrayIndexOf = function(s, from) {
+    var len = this.length >>> 0;
+    if (!len) return -1;
+    var i = from ? Number(from) : 0;
+    if (isNaN(i)) i = 0;
+    if (i < 0) i = len + i;
+    if (i < 0) i = 0;
+    for (; i < len; i++) if (this[i] === s) return i;
+    return -1;
+  };
+  try {
+    Object.defineProperty(Array.prototype, 'indexOf', { value: shroomArrayIndexOf, writable: true, configurable: true, enumerable: false });
+  } catch (e) { Array.prototype.indexOf = shroomArrayIndexOf; }
+}
+if (typeof Array.prototype.includes !== 'function') {
+  var shroomArrayIncludes = function(s, from) {
+    var len = this.length >>> 0;
+    if (!len) return false;
+    var i = from ? Number(from) : 0;
+    if (isNaN(i)) i = 0;
+    if (i < 0) i = len + i;
+    if (i < 0) i = 0;
+    for (; i < len; i++) if (this[i] === s) return true;
+    return false;
+  };
+  try {
+    Object.defineProperty(Array.prototype, 'includes', { value: shroomArrayIncludes, writable: true, configurable: true, enumerable: false });
+  } catch (e) { Array.prototype.includes = shroomArrayIncludes; }
+}
 // The archived pages call setCursor, which only the desktop copy of oss.js defines;
 // a declaration in oss.js replaces this stub where it exists.
 if (typeof window.setCursor !== 'function') window.setCursor = function() {};
@@ -259,4 +281,20 @@ function shroomRegisterDevice() {
     x.send(body);
   } catch (e) {}
 }
-setTimeout(shroomRegisterDevice, 30);function shroomConsoleBanner(i, name, count, img) { return '<div id="banner0' + (i + 1) + '" style="position:absolute; left:' + ((i % 2) * 244) + 'px; top:' + (1 + Math.floor(i / 2) * 92) + '.0px; width:244px; height:91px; z-index:5;"><img src="/oss/oss/common/images//banner/B_04_halfB_consolebannerE_a.png" width="244" height="91" id="Image0' + (i + 1) + '" /></div><div id="logo0' + (i + 1) + '" style="position:absolute; left:' + (11 + (i % 2) * 244) + 'px; top:' + (9 + Math.floor(i / 2) * 92) + '.0px; width:110px; height:52px; z-index:6;"><img src="/oss/oss/ext/attributes/images/platform/Plat_' + (img) + '_E.gif" width="110" height="52" id="Logo0' + (i + 1) + '" /></div><div id="word0' + (i + 1) + '" style="position:absolute; left:' + (11 + (i % 2) * 244) + 'px; top:' + (62 + Math.floor(i / 2) * 92) + '.0px; width:225px; height:20px; z-index:6; overflow: hidden;"><table width="100%" height="100%"><tr><td align="left" valign="top"><span class="contentsBlack">' + (name) + '</span></td></tr></table></div><div id="hit0' + (i + 1) + '-01" style="position:absolute; left:' + (122 + (i % 2) * 244) + 'px; top:' + (25 + Math.floor(i / 2) * 92) + '.0px; width:76px; height:16px; z-index:6;"><table width="100%" height="100%"><tr><td align="right" valign="top"><span class="contentsBlack">Titles:</span></td></tr></table></div><div id="hit0' + (i + 1) + '-02" style="position:absolute; left:' + (198 + (i % 2) * 244) + 'px; top:' + (25 + Math.floor(i / 2) * 92) + '.0px; width:31px; height:16px; z-index:6;"><table width="100%" height="100%"><tr><td align="right" valign="top"><span class="contentsBlack">' + (count) + '</span></td></tr></table></div><div id="spacer0' + (i + 1) + '" style="position:absolute; left:' + ((i % 2) * 244) + 'px; top:' + (1 + Math.floor(i / 2) * 92) + '.0px; width:244px; height:91px; z-index:7;"><a href="javascript:showPage(\'B_04.html?p=1&vc=true&platform=' + (name) + '\')"><img src="/oss/oss/common/images//spacer.gif" name="Image0' + (i + 1) + 's" width="244" height="91" border="0" id="Image0' + (i + 1) + 's" onmouseover="MM_swapImage(\'Image0' + (i + 1) + '\',\'\',\'/oss/oss/common/images//banner/B_04_halfB_consolebannerE_b.png\',1);snd.playSE( cSE_Forcus );" onmouseout="MM_swapImgRestore()" onclick="snd.playSE(cSE_Decide);" /></a></div>'; }
+setTimeout(shroomRegisterDevice, 30);
+function shroomEscapeHTML(value) {
+  return String(value == null ? '' : value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function shroomURLComponent(value) {
+  return encodeURIComponent(String(value == null ? '' : value)).replace(/'/g, '%27').replace(/"/g, '%22');
+}
+function shroomConsoleBanner(i, name, count, img) {
+  i = Number(i) || 0;
+  var label = shroomEscapeHTML(name);
+  var platform = shroomURLComponent(name);
+  var image = String(img == null ? '' : img).replace(/[^A-Za-z0-9_]/g, '');
+  var total = shroomEscapeHTML(count);
+  var row = Math.floor(i / 2);
+  var col = i % 2;
+  return '<div id="banner0' + (i + 1) + '" style="position:absolute; left:' + (col * 244) + 'px; top:' + (1 + row * 92) + '.0px; width:244px; height:91px; z-index:5;"><img src="/oss/oss/common/images//banner/B_04_halfB_consolebannerE_a.png" width="244" height="91" id="Image0' + (i + 1) + '" /></div><div id="logo0' + (i + 1) + '" style="position:absolute; left:' + (11 + col * 244) + 'px; top:' + (9 + row * 92) + '.0px; width:110px; height:52px; z-index:6;"><img src="/oss/oss/ext/attributes/images/platform/Plat_' + image + '_E.gif" width="110" height="52" id="Logo0' + (i + 1) + '" /></div><div id="word0' + (i + 1) + '" style="position:absolute; left:' + (11 + col * 244) + 'px; top:' + (62 + row * 92) + '.0px; width:225px; height:20px; z-index:6; overflow: hidden;"><table width="100%" height="100%"><tr><td align="left" valign="top"><span class="contentsBlack">' + label + '</span></td></tr></table></div><div id="hit0' + (i + 1) + '-01" style="position:absolute; left:' + (122 + col * 244) + 'px; top:' + (25 + row * 92) + '.0px; width:76px; height:16px; z-index:6;"><table width="100%" height="100%"><tr><td align="right" valign="top"><span class="contentsBlack">Titles:</span></td></tr></table></div><div id="hit0' + (i + 1) + '-02" style="position:absolute; left:' + (198 + col * 244) + 'px; top:' + (25 + row * 92) + '.0px; width:31px; height:16px; z-index:6;"><table width="100%" height="100%"><tr><td align="right" valign="top"><span class="contentsBlack">' + total + '</span></td></tr></table></div><div id="spacer0' + (i + 1) + '" style="position:absolute; left:' + (col * 244) + 'px; top:' + (1 + row * 92) + '.0px; width:244px; height:91px; z-index:7;"><a href="javascript:showPage(\'B_04.html?p=1&vc=true&platform=' + platform + '\')"><img src="/oss/oss/common/images//spacer.gif" name="Image0' + (i + 1) + 's" width="244" height="91" border="0" id="Image0' + (i + 1) + 's" onmouseover="MM_swapImage(\'Image0' + (i + 1) + '\',\'\',\'/oss/oss/common/images//banner/B_04_halfB_consolebannerE_b.png\',1);snd.playSE( cSE_Forcus );" onmouseout="MM_swapImgRestore()" onclick="snd.playSE(cSE_Decide);" /></a></div>';
+}

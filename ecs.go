@@ -160,7 +160,7 @@ func purchaseTitle(e *Envelope) {
 	// Determine the title ID we're going to purchase.
 	titleId, err := e.getKey("TitleId")
 	if err != nil {
-		e.Error(2, "missing account ID", err)
+		e.Error(2, "missing title ID", err)
 		return
 	}
 

@@ -1424,8 +1424,9 @@ func (s *storefront) classicSiteHandler(soap http.Handler) http.Handler {
 			text = strings.ReplaceAll(text, strings.Repeat("･", 75), strings.Repeat("･", 76))
 			// The archived registration pages are JSP: the original server filled
 			// their hidden "next" field into the page. Preserve that behaviour so
-			// CheckBalance returns to W_01 instead of stalling.
-			if r.Method == http.MethodPost && (filePath == "/oss/serv/CheckBalance.html" || filePath == "/oss/serv/Register.html") {
+			// CheckBalance returns to W_01 instead of stalling. The original also
+			// filled it for GET, so accept "next" from either the query or body.
+			if filePath == "/oss/serv/CheckBalance.html" || filePath == "/oss/serv/Register.html" {
 				if r.ParseForm() == nil {
 					// The client applies encodeURIComponent before the form
 					// encoding. ParseForm removes the outer layer, so one
