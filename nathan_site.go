@@ -1497,23 +1497,15 @@ func (s *storefront) classicSiteHandler(soap http.Handler) http.Handler {
 				text = strings.Replace(text, "</body>", "<script type=\"text/javascript\" src=\"/shroombrew-browse.js\"></script></body>", 1)
 			}
 			if filePath == "/oss/serv/W_01.html" {
-				// The connecting screen draws the shop's two dotted rules, but the
-				// captured W_01 page has none, so they vanished as soon as the shop
-				// opened. Put the same rules back on the first shop page.
-				dots := `<div class="dot" id="line01">` + shellDots + `</div><div class="dot" id="line02">` + shellDots + `</div>`
-				script := `<script type="text/javascript" src="/shroombrew-welcome.js"></script>`
-				if !strings.Contains(text, `id="line01"`) {
-					text = strings.Replace(text, "</body>", dots+script+"</body>", 1)
-				} else {
-					text = strings.Replace(text, "</body>", script+"</body>", 1)
-				}
+				// The welcome/recommended-titles screen has no dotted rules.
+				text = strings.Replace(text, "</body>", `<script type="text/javascript" src="/shroombrew-welcome.js"></script></body>`, 1)
 			}
 			if strings.HasPrefix(filePath, "/oss/serv/") && strings.HasSuffix(filePath, ".html") {
 				// Keep the two rules on every normal shop page, including pages
 				// that are not wired into the current navigation. B_13 is a
-				// full-screen health warning and M_01 is the manual viewer; both
-				// deliberately have no frame.
-				if filePath != "/oss/serv/B_13.html" && filePath != "/oss/serv/M_01.html" &&
+				// full-screen health warning, M_01 is the manual viewer and W_01
+				// is the welcome screen; all three deliberately have no rules.
+				if filePath != "/oss/serv/B_13.html" && filePath != "/oss/serv/M_01.html" && filePath != "/oss/serv/W_01.html" &&
 					!strings.Contains(text, `id="line01"`) && !strings.Contains(text, `id="line02"`) {
 					dots := `<div class="dot" id="line01">` + shellDots + `</div><div class="dot" id="line02">` + shellDots + `</div>`
 					text = strings.Replace(text, "</body>", dots+"</body>", 1)
