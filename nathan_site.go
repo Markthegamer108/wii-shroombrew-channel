@@ -950,6 +950,10 @@ function pcAllowed(g){var a=pcAge();if(!a)return true;var r=ratingAge(g.rating);
 // The main menu's tiles link with the archived parameters (vc=true,
 // platform=WiiWare, platform=Wii Channels in each language); map them to sections.
 function section(){var c=value('category');if(c)return c;if(value('vc')=='true')return 'Virtual Console';var p=value('platform').toLowerCase();if(p.indexOf('wiiware')>=0)return 'WiiWare';if(p.indexOf('virtual')>=0)return 'Virtual Console';if(/channel|kanal|cha.ne|canal/.test(p))return 'Channels';return '';}
+// B_03's console banners pass a specific platform name (NES, Nintendo 64,
+// ...), not a section. Keep those lists on that console instead of falling
+// back to the whole catalogue.
+function consoleFilter(p){return /^(nes|super nes|nintendo 64|turbografx16|sega genesis|neogeo|master system|virtual console arcade|commodore 64|msx)$/i.test(p);}
 function pageURL(number){var old=location.search.substring(1).split('&');var kept=[];for(var j=0;j<old.length;j++){if(old[j]&&old[j].split('=')[0]!='p')kept.push(old[j]);}kept.push('p='+number);return '/oss/serv/B_04.html?'+kept.join('&');}
 // The list's heading, as on the original page: one plain title, no links.
 function nav(){
@@ -965,6 +969,7 @@ function nav(){
  else if(value('order')=='new')t='Newest Additions';
  else if(value('popular')=='true')t='Popular Titles';
  else if(value('publisher'))t=value('publisher');
+ else if(value('platform')&&consoleFilter(value('platform')))t=value('platform');
  else t={'Virtual Console':'Virtual Console','WiiWare':'WiiWare','Channels':'Wii Channels','DLC':'DLC'}[cur]||'Catalog';
  info.innerHTML=esc(t);
 }
@@ -972,7 +977,7 @@ function render(){
  var frame=document.getElementById('catalogFrame');if(!frame||typeof gameslist=='undefined'){if(retries++<20)setTimeout(render,250);return;}
  nav();
  var page=parseInt(value('p')||'1',10);if(!page||page<1)page=1;
- var title=value('title').toLowerCase();var genre=value('genre').toLowerCase();var cat=section().toLowerCase();var publisher=value('publisher').toLowerCase();var list=[];var i;
+ var title=value('title').toLowerCase();var genre=value('genre').toLowerCase();var platform=value('platform');var consoleOnly=consoleFilter(platform);var cat=section().toLowerCase();var publisher=value('publisher').toLowerCase();var list=[];var i;
  // A section lists only its own titles: the MarioCube ones in Virtual
  // Console/WiiWare/DLC/Wii Channels. Homebrew shows only behind the
  // Homebrew tile of the VC (emulators) and WiiWare (games) choosers (hb=1).
@@ -996,6 +1001,7 @@ function render(){
  for(i=1;i<gameslist.length;i++){
   var game=gameslist[i];if(!game||!game.id)continue;
   if(title&&((game.title1||'')+' '+(game.title2||'')+' '+(game.publisher||'')).toLowerCase().indexOf(title)<0)continue;
+  if(consoleOnly&&String(game.console||'').toLowerCase()!=platform.toLowerCase())continue;
   if(!matchGenre(game))continue;
   if(publisher&&String(game.publisher||'').toLowerCase().indexOf(publisher)<0)continue;
   if(!pcAllowed(game))continue;
