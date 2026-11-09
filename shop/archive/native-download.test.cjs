@@ -14,7 +14,7 @@ function run({destination='nand', sdResults=[], purchase={status:0,errCode:0,tot
  }
  const context={document:{getElementById:element,createElement(){return element('created'+Object.keys(nodes).length);},
   createTextNode(value){return {value};},body:element('body')},
-  setButtonText(){},location:{},setTimeout(fn){timers.push(fn);},
+  setButtonText(){},location:{search:''},setTimeout(fn){timers.push(fn);},
   wiiShop:function(){this.endWaiting=function(){};this.setSCARank=function(){calls.push('mario');};},
   ECommerceInterface:function(){Object.assign(this,{
    setWebSvcUrls(){},setContentUrls(){},setParameter(){},
