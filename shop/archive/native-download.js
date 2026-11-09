@@ -29,7 +29,9 @@ function ShroombrewNativeDownload(d) {
   shop=new wiiShop();var connecting=shop.connecting;shop.endWaiting();
   ec=new ECommerceInterface();
   var host=d.ServiceDomain;
-  ec.setWebSvcUrls('https://ecs.'+host+'/ecs/services/ECommerceSOAP','https://ias.'+host+'/ias/services/IdentityAuthenticationSOAP','https://cas.'+host+'/cas/services/CatalogingSOAP');
+  // Every service is served from oss-auth, matching GetECConfig. cas and nus
+  // have no public DNS records, so pointing the console at them would fail.
+  ec.setWebSvcUrls('https://oss-auth.'+host+'/ecs/services/ECommerceSOAP','https://oss-auth.'+host+'/ias/services/IdentityAuthenticationSOAP','https://oss-auth.'+host+'/cas/services/CatalogingSOAP');
   ec.setContentUrls('https://ccs.'+host+'/ccs/download','https://ccs.'+host+'/ccs/download');
   if(d.Destination==='sd'){
    if(typeof wiiSDCard==='undefined')throw new Error(L('Native SD interface unavailable.'));
