@@ -5,6 +5,10 @@ var shroomNativeAPI = {
   ec: typeof ECommerceInterface !== 'undefined' ? ECommerceInterface : null
 };
 if (typeof window.trace !== 'function') window.trace = function() {};
+// The archived Wii Point Clicker stores its counters through the shell.
+if (typeof window.getValue !== 'function') window.getValue = function(key) { try { return window[key]; } catch (e) { return null; } };
+if (typeof window.setValue !== 'function') window.setValue = function(key, value) { try { window[key] = value; } catch (e) {} };
+if (typeof window.points === 'undefined') window.points = 0;
 // Opera 9.30 predates String.includes; buttons.js calls it inside setUnderButtonL,
 // and the throw stopped page setup after the first button.
 if (typeof String.prototype.includes !== 'function') String.prototype.includes = function(s, from) { return this.indexOf(s, from || 0) !== -1; };
