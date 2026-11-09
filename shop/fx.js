@@ -32,8 +32,8 @@
    site applies to both. */
 (function () {
   if (window.shroomFX) return;
-  // The server also hosts a copy of the website under /community/.
-  var isShop = !!document.getElementById("mariocanvas") || (/^shop\./.test(location.hostname) && location.pathname.indexOf("/community/") !== 0);
+  // The community site lives on shroombrew.org; this host serves the shop.
+  var isShop = !!document.getElementById("mariocanvas") || /^shop\./.test(location.hostname);
   var base = isShop ? "" : "https://shop.shroombrew.org";
 
   // #fxdate=YYYY-MM-DD previews another day's effects. (Not a query string:
