@@ -33,7 +33,7 @@ func referenceSiteHandler(root string, next http.Handler) http.Handler {
 		requestPath := path.Clean("/" + r.URL.Path)
 		// Reserve server routes even if a future reference download happens to
 		// contain a matching filename.
-		for _, prefix := range []string{"/api/", "/download/", "/shop-download/", "/wii-install/", "/source/", "/tools/", "/icons/", "/shop/", "/wad/", "/shroombrew-"} {
+		for _, prefix := range []string{"/api/", "/download/", "/downloads/", "/shop-download/", "/wii-install/", "/source/", "/tools/", "/icons/", "/shop/", "/shroombrew-"} {
 			if strings.HasPrefix(requestPath, prefix) {
 				next.ServeHTTP(w, r)
 				return

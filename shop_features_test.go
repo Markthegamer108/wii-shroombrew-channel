@@ -109,12 +109,11 @@ func TestRepairedFrontendRoutes(t *testing.T) {
 	if !strings.Contains(w.Body.String(), "Connecting") {
 		t.Fatal("CheckRegistered page lost its connecting screen")
 	}
-	// The WAD install page is public and names the patched download.
+	// The old /wad page is gone; the WAD is a direct download route.
 	w = httptest.NewRecorder()
 	h.ServeHTTP(w, httptest.NewRequest("GET", "/wad", nil))
-	if w.Code != 200 || !strings.Contains(w.Body.String(), "Install Shroombrew on a real Wii") ||
-		!strings.Contains(w.Body.String(), wadInstallName) {
-		t.Fatalf("wad page: %d", w.Code)
+	if w.Code != 404 {
+		t.Fatalf("old wad page still served: %d", w.Code)
 	}
 	w = httptest.NewRecorder()
 	h.ServeHTTP(w, httptest.NewRequest("POST", "/wii-install/start", nil))

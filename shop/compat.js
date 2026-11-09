@@ -9,6 +9,10 @@ if (typeof window.trace !== 'function') window.trace = function() {};
 // and the throw stopped page setup after the first button.
 if (typeof String.prototype.includes !== 'function') String.prototype.includes = function(s, from) { return this.indexOf(s, from || 0) !== -1; };
 if (typeof String.prototype.startsWith !== 'function') String.prototype.startsWith = function(s, from) { return this.indexOf(s, from || 0) === 0; };
+if (typeof Array.prototype.indexOf !== 'function') Array.prototype.indexOf = function(s, from) {
+  for (var i = from || 0; i < this.length; i++) if (this[i] === s) return i;
+  return -1;
+};
 if (typeof Array.prototype.includes !== 'function') Array.prototype.includes = function(s, from) {
   for (var i = from || 0; i < this.length; i++) if (this[i] === s) return true;
   return false;
@@ -255,4 +259,4 @@ function shroomRegisterDevice() {
     x.send(body);
   } catch (e) {}
 }
-setTimeout(shroomRegisterDevice, 30);
+setTimeout(shroomRegisterDevice, 30);function shroomConsoleBanner(i, name, count, img) { return '<div id="banner0' + (i + 1) + '" style="position:absolute; left:' + ((i % 2) * 244) + 'px; top:' + (1 + Math.floor(i / 2) * 92) + '.0px; width:244px; height:91px; z-index:5;"><img src="/oss/oss/common/images//banner/B_04_halfB_consolebannerE_a.png" width="244" height="91" id="Image0' + (i + 1) + '" /></div><div id="logo0' + (i + 1) + '" style="position:absolute; left:' + (11 + (i % 2) * 244) + 'px; top:' + (9 + Math.floor(i / 2) * 92) + '.0px; width:110px; height:52px; z-index:6;"><img src="/oss/oss/ext/attributes/images/platform/Plat_' + (img) + '_E.gif" width="110" height="52" id="Logo0' + (i + 1) + '" /></div><div id="word0' + (i + 1) + '" style="position:absolute; left:' + (11 + (i % 2) * 244) + 'px; top:' + (62 + Math.floor(i / 2) * 92) + '.0px; width:225px; height:20px; z-index:6; overflow: hidden;"><table width="100%" height="100%"><tr><td align="left" valign="top"><span class="contentsBlack">' + (name) + '</span></td></tr></table></div><div id="hit0' + (i + 1) + '-01" style="position:absolute; left:' + (122 + (i % 2) * 244) + 'px; top:' + (25 + Math.floor(i / 2) * 92) + '.0px; width:76px; height:16px; z-index:6;"><table width="100%" height="100%"><tr><td align="right" valign="top"><span class="contentsBlack">Titles:</span></td></tr></table></div><div id="hit0' + (i + 1) + '-02" style="position:absolute; left:' + (198 + (i % 2) * 244) + 'px; top:' + (25 + Math.floor(i / 2) * 92) + '.0px; width:31px; height:16px; z-index:6;"><table width="100%" height="100%"><tr><td align="right" valign="top"><span class="contentsBlack">' + (count) + '</span></td></tr></table></div><div id="spacer0' + (i + 1) + '" style="position:absolute; left:' + ((i % 2) * 244) + 'px; top:' + (1 + Math.floor(i / 2) * 92) + '.0px; width:244px; height:91px; z-index:7;"><a href="javascript:showPage(\'B_04.html?p=1&vc=true&platform=' + (name) + '\')"><img src="/oss/oss/common/images//spacer.gif" name="Image0' + (i + 1) + 's" width="244" height="91" border="0" id="Image0' + (i + 1) + 's" onmouseover="MM_swapImage(\'Image0' + (i + 1) + '\',\'\',\'/oss/oss/common/images//banner/B_04_halfB_consolebannerE_b.png\',1);snd.playSE( cSE_Forcus );" onmouseout="MM_swapImgRestore()" onclick="snd.playSE(cSE_Decide);" /></a></div>'; }

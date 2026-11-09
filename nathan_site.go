@@ -1031,7 +1031,7 @@ function render(){
  // A press that opened this list must not also open the row now under the pointer.
  window.shroomListReady=new Date().getTime()+700;
  frame.innerHTML=html;frame.style.display='';frame.style.overflow='visible';frame.style.left='60px';frame.style.width='488px';frame.style.background='white';frame.style.border='none';
-  try{var badges=frame.querySelectorAll('.shroom-updated');for(var bi=0;bi<badges.length;bi++){var b=badges[bi];var id=b.getAttribute('data-id');var ver=parseInt(b.getAttribute('data-ver'),10)||0;var st=sessionStorage.getItem('shroomInstalled_'+id);if(st!==null){var have=parseInt(st,10)||0;if(ver>have && ver>0){b.style.display='block';var nu=frame.querySelector('.shroom-new[data-id="'+id+'"]');if(nu)nu.style.display='none';}}}}catch(e){}
+  try{var all=frame.getElementsByTagName('*');for(var bi=0;bi<all.length;bi++){var b=all[bi];if(!b.className||String(b.className).indexOf('shroom-updated')<0)continue;var id=b.getAttribute('data-id');var ver=parseInt(b.getAttribute('data-ver'),10)||0;var st=sessionStorage.getItem('shroomInstalled_'+id);if(st!==null){var have=parseInt(st,10)||0;if(ver>have && ver>0){b.style.display='block';for(var ni=0;ni<all.length;ni++){var nu=all[ni];if(nu.className&&String(nu.className).indexOf('shroom-new')>=0&&nu.getAttribute('data-id')==id){nu.style.display='none';break;}}}}}}catch(e){}
  var count=document.getElementById('pageNum');if(count)count.innerHTML=page+'/'+pages;
  var left=document.getElementById('backArrow');if(left){left.href=pageURL(page>1?page-1:1);left.onclick=function(){shroomNavigate(left.href);return false;};}
  var right=document.getElementById('nextArrow');if(right){right.href=pageURL(page<pages?page+1:pages);right.onclick=function(){shroomNavigate(right.href);return false;};}
@@ -1420,14 +1420,22 @@ func (s *storefront) classicSiteHandler(soap http.Handler) http.Handler {
 			text = strings.ReplaceAll(text, "http://wiishopchannel.net", "")
 			text = strings.ReplaceAll(text, "http://wiishopchannel.neocities.org", "")
 			text = shopServiceHosts(text, shopBaseDomain(r.Host))
+			// Fill the full 608px page width: 76 dots at the font's 8px advance.
+			text = strings.ReplaceAll(text, strings.Repeat("･", 75), strings.Repeat("･", 76))
 			// The archived registration pages are JSP: the original server filled
 			// their hidden "next" field into the page. Preserve that behaviour so
 			// CheckBalance returns to W_01 instead of stalling.
 			if r.Method == http.MethodPost && (filePath == "/oss/serv/CheckBalance.html" || filePath == "/oss/serv/Register.html") {
 				if r.ParseForm() == nil {
-					if next := r.Form.Get("next"); safeRegistrationNext(next) {
-						if quoted, err := json.Marshal(next); err == nil {
-							text = strings.Replace(text, "decodeURIComponent('')", string(quoted), 1)
+					// The client applies encodeURIComponent before the form
+					// encoding. ParseForm removes the outer layer, so one
+					// QueryUnescape is needed to validate the target. Keep the
+					// still-encoded value in the page and let its existing
+					// decodeURIComponent() perform that one decode.
+					raw := r.Form.Get("next")
+					if decoded, err := url.QueryUnescape(raw); err == nil && safeRegistrationNext(decoded) {
+						if quoted, err := json.Marshal(raw); err == nil {
+							text = strings.Replace(text, "decodeURIComponent('')", "decodeURIComponent("+string(quoted)+")", 1)
 						}
 					}
 				}

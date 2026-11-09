@@ -151,7 +151,11 @@ func purchaseTitle(e *Envelope) {
 	}
 
 	// Our struct takes an integer rather than a string.
-	itemId, _ := strconv.Atoi(tempItemId)
+	itemId, err := strconv.Atoi(tempItemId)
+	if err != nil {
+		e.Error(2, "invalid item ID", err)
+		return
+	}
 
 	// Determine the title ID we're going to purchase.
 	titleId, err := e.getKey("TitleId")

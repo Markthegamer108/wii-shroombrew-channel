@@ -36,6 +36,22 @@ import (
 // registrationCountry returns the console's own country. The upstream server
 // hard-coded "DE", which made US/JP consoles see an account-country mismatch
 // and loop back to the country-change page after registering.
+// syncTokenMatches accepts the raw token, ST-raw, or WT-md5 forms used by
+// different EC client paths.
+func syncTokenMatches(requestToken, storedToken string) bool {
+	if requestToken == storedToken {
+		return true
+	}
+	if strings.HasPrefix(requestToken, "ST-") && strings.TrimPrefix(requestToken, "ST-") == storedToken {
+		return true
+	}
+	if strings.HasPrefix(requestToken, "WT-") {
+		sum := fmt.Sprintf("%x", md5.Sum([]byte(storedToken)))
+		return strings.TrimPrefix(requestToken, "WT-") == sum
+	}
+	return false
+}
+
 func registrationCountry(e *Envelope) string {
 	if c := strings.TrimSpace(e.Country()); c != "" {
 		return c
@@ -164,6 +180,24 @@ func syncRegistration(e *Envelope) {
 	if err = serialWhitelisted(serialNumber); err != nil {
 		e.Error(7, "this console is not allowed to use the shop", err)
 		return
+	}
+
+	// Token recovery is unauthenticated by necessity (a console that lost
+	// ec.cfg has no token yet). Require either the existing token or the
+	// console's serial number so a device ID alone cannot disclose a reusable
+	// ECS credential.
+	reqToken, _ := e.getKey("DeviceToken")
+	if reqToken != "" {
+		if !syncTokenMatches(reqToken, deviceToken) {
+			e.Error(7, "invalid device token", errors.New("device token does not match"))
+			return
+		}
+	} else {
+		reqSerial, _ := e.getKey("SerialNumber")
+		if reqSerial == "" || reqSerial != serialNumber {
+			e.Error(7, "serial number required", errors.New("missing or mismatched serial number"))
+			return
+		}
 	}
 
 	e.AddKVNode("AccountId", strconv.FormatInt(accountId, 10))

@@ -110,9 +110,7 @@ func (s *storefront) featureHandler(next http.Handler) http.Handler {
 			w.Write(data)
 		case strings.HasPrefix(r.URL.Path, "/community/api/"):
 			s.communityAPI(w, r)
-		case r.URL.Path == "/wad" || r.URL.Path == "/wad/":
-			s.wadPage(w, r)
-		case r.URL.Path == "/wad/"+wadInstallName:
+		case r.URL.Path == "/downloads/"+wadInstallName:
 			s.wadDownload(w, r)
 		case r.URL.Path == "/friends":
 			s.friendsPage(w, r)

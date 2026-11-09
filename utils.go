@@ -1,4 +1,4 @@
-﻿//	Copyright (C) 2018-2020 CornierKhan1
+//	Copyright (C) 2018-2020 CornierKhan1
 //
 //	WiiSOAP is SOAP Server Software, designed specifically to handle Wii Shop Channel SOAP.
 //
@@ -18,6 +18,7 @@
 package main
 
 import (
+	cryptorand "crypto/rand"
 	"encoding/base64"
 	"encoding/xml"
 	"errors"
@@ -25,7 +26,6 @@ import (
 	"github.com/antchfx/xmlquery"
 	"io"
 	"log"
-	"math/rand"
 	"regexp"
 	"strconv"
 	"strings"
@@ -349,11 +349,22 @@ func (e *Envelope) getKeys(key string) ([]*xmlquery.Node, error) {
 // Derived from https://stackoverflow.com/a/31832326, adding numbers
 const letterBytes = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-// RandString generates a random string with n length.
+// RandString generates a cryptographically random string with n length.
+// Device tokens are bearer credentials for ECS, so this must not use math/rand.
 func RandString(n int) string {
 	b := make([]byte, n)
+	limit := 256 - (256 % len(letterBytes))
 	for i := range b {
-		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+		var v [1]byte
+		for {
+			if _, err := cryptorand.Read(v[:]); err != nil {
+				continue
+			}
+			if int(v[0]) < limit {
+				b[i] = letterBytes[int(v[0])%len(letterBytes)]
+				break
+			}
+		}
 	}
 	return string(b)
 }
