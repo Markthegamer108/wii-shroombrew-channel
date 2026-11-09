@@ -60,6 +60,18 @@ func (s *storefront) featureHandler(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
+		// The shop host serves the shop, not a second copy of the community
+		// website. Keep /community/api/ because the GitHub Pages site uses it
+		// as its backend.
+		if (r.URL.Path == "/community" || strings.HasPrefix(r.URL.Path, "/community/")) &&
+			!strings.HasPrefix(r.URL.Path, "/community/api/") {
+			http.NotFound(w, r)
+			return
+		}
+		if r.URL.Path == "/shroombrew" || strings.HasPrefix(r.URL.Path, "/shroombrew/") {
+			http.NotFound(w, r)
+			return
+		}
 		if strings.HasPrefix(r.URL.Path, "/community/api/") || r.URL.Path == "/healthz" || strings.HasPrefix(r.URL.Path, "/archive-shop/assets/") {
 			if pagesCORS(w, r) {
 				return
@@ -71,24 +83,6 @@ func (s *storefront) featureHandler(next http.Handler) http.Handler {
 			}
 		}
 		switch {
-		case r.URL.Path == "/" && (r.Method == http.MethodGet || r.Method == http.MethodHead) && !isWiiShopUA(r) && siteHostMatches(r.Host):
-			// The public website host lands on the community site, not the shop front page.
-			http.Redirect(w, r, "/community/index.html", http.StatusFound)
-		case r.URL.Path == "/community":
-			http.Redirect(w, r, "/community/", http.StatusFound)
-		case r.URL.Path == "/community/":
-			// Serve the community single-page site directly (index.html with hash routing)
-			localPath := filepath.Join(nathanSiteRoot, "community", "index.html")
-			http.ServeFile(w, r, localPath)
-			return
-		case strings.HasSuffix(r.URL.Path, ".html") && (strings.HasPrefix(r.URL.Path, "/community/") || strings.HasPrefix(r.URL.Path, "/shroombrew/")):
-			name := strings.TrimSuffix(filepath.Base(r.URL.Path), ".html")
-			if name == "index" {
-				http.Redirect(w, r, "/community/", http.StatusMovedPermanently)
-			} else {
-				http.Redirect(w, r, "/community/#"+name, http.StatusMovedPermanently)
-			}
-			return
 		case strings.HasPrefix(r.URL.Path, "/archive-shop/assets/") || r.URL.Path == "/archive-shop/checkout.js" || r.URL.Path == "/archive-shop/mario.js" || r.URL.Path == "/archive-shop/native-download.js":
 			archivedShopAsset(w, r)
 		case r.Method == http.MethodPost && strings.HasPrefix(r.URL.Path, "/api/install/") && strings.HasSuffix(r.URL.Path, "/complete"):
