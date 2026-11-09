@@ -127,9 +127,12 @@ func shopServiceHosts(text, domain string) string {
 	// the reference server's /oss prefix from the SOAP/content paths.
 	text = strings.ReplaceAll(text, "a.taur.cloud", domain)
 	text = strings.ReplaceAll(text, "ccs.blinklab.com", "ccs."+domain)
-	for _, service := range []string{"ecs", "ias", "ccs", "cas", "nus"} {
+	for _, service := range []string{"ecs", "ias", "cas", "nus"} {
 		text = strings.ReplaceAll(text, "/oss/"+service+"/", "/"+service+"/")
 	}
+	// Only the content-download path loses the /oss prefix. Thumbnails stay at
+	// /oss/ccs/<titleId>/FFFD..., which is where the shop serves box art.
+	text = strings.ReplaceAll(text, "/oss/ccs/download", "/ccs/download")
 	return text
 }
 
