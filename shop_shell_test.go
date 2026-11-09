@@ -38,9 +38,14 @@ func TestShopShellUsesTheRealSkeleton(t *testing.T) {
 
 func TestNoticeHasOnlyContinueAndNoTopHelp(t *testing.T) {
 	out := shopShellOpts("Notice", `<div class="panel"><p>x</p></div><div class="foot">`+shopLink("/notice?hide=1", "Continue")+`</div>`, false)
-	for _, want := range []string{`<div id="help" style="display:none">`, `<div id="top" style="display:none">`, `setUnderButtonR(true,"Continue"`, `sh.endWaiting()`, `id="upperLineLong"`} {
+	for _, want := range []string{`setUnderButtonR(true,"Continue"`, `sh.endWaiting()`, `id="upperLineLong"`} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %s", want)
+		}
+	}
+	for _, gone := range []string{`<div id="help"`, `<div id="top"`, `<div id="tophelpshadow">`} {
+		if strings.Contains(out, gone) {
+			t.Errorf("notice still contains %s", gone)
 		}
 	}
 	if strings.Contains(out, "setUnderButtonL(") {

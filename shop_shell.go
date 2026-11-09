@@ -17,10 +17,11 @@ import (
 // the real Back / Next banner buttons.
 
 var (
-	shellFootRe = regexp.MustCompile(`(?s)<div class="foot">(.*)</div>\s*$`)
-	shellLinkRe = regexp.MustCompile(`(?s)<a\b[^>]*?href="([^"]*)"[^>]*>(.*?)</a>`)
-	shellTagRe  = regexp.MustCompile(`<[^>]*>`)
-	newsHeadRe  = regexp.MustCompile(`^<div class="panel news" data-head="([^"]*)">`)
+	shellFootRe    = regexp.MustCompile(`(?s)<div class="foot">(.*)</div>\s*$`)
+	shellTopHelpRe = regexp.MustCompile(`(?s)<div id="(?:tophelpshadow|help|top)">.*?</div>`)
+	shellLinkRe    = regexp.MustCompile(`(?s)<a\b[^>]*?href="([^"]*)"[^>]*>(.*?)</a>`)
+	shellTagRe     = regexp.MustCompile(`<[^>]*>`)
+	newsHeadRe     = regexp.MustCompile(`^<div class="panel news" data-head="([^"]*)">`)
 )
 
 type shellButton struct{ label, link string }
@@ -186,9 +187,9 @@ func shopShellOpts(title, content string, topHelp bool) string {
 	body, buttons := splitFoot(content)
 	consts := shellConst
 	if !topHelp {
-		consts = strings.Replace(consts, `<div id="help">`, `<div id="help" style="display:none">`, 1)
-		consts = strings.Replace(consts, `<div id="top">`, `<div id="top" style="display:none">`, 1)
-		consts = strings.Replace(consts, `<div id="tophelpshadow">`, `<div id="tophelpshadow" style="display:none">`, 1)
+		// The startup notice has no Top or Help control at all, not merely a
+		// hidden one, so it also does not preload their images.
+		consts = shellTopHelpRe.ReplaceAllString(consts, "")
 		// Without Top and Help the upper rule runs the full width (upperLineLong).
 		consts = strings.Replace(consts, `<div class="dot" id="line01">`, `<div class="dot" id="upperLineLong">`, 1)
 	}

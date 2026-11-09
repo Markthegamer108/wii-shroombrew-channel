@@ -75,11 +75,15 @@ func walletRefund(id string, price int) {
 }
 
 func writeShopPage(w http.ResponseWriter, title, content string) {
+	writeShopPageOpts(w, title, content, true)
+}
+
+func writeShopPageOpts(w http.ResponseWriter, title, content string, topHelp bool) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	// These pages show live balances and change with each deploy; the
 	// console's browser would otherwise reuse an old copy.
 	w.Header().Set("Cache-Control", "no-cache")
-	_, _ = w.Write([]byte(shopShell(title, content)))
+	_, _ = w.Write([]byte(shopShellOpts(title, content, topHelp)))
 }
 
 func (s *storefront) pointsPage(w http.ResponseWriter, r *http.Request) {

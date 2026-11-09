@@ -571,6 +571,13 @@ func (s *storefront) featureInfo(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/help" {
 		content += `<p class="small">` + esc(tl(lang, "ft_credit")) + ` <a href="/source/shroombrew-source.tar.gz">Server source</a>.</p>`
 	}
+	// The startup notice/news page is the one shop screen with no Top/Help
+	// buttons and only a Back button, matching W_02 on wiishopchannel.net.
+	if r.URL.Path == "/news" || r.URL.Path == "/oss/serv/W_02.html" {
+		foot := `<div class="foot">` + shopLink(back, tl(lang, "w_back")) + `</div>`
+		writeShopPageOpts(w, title, panel+content+`</div>`+foot, false)
+		return
+	}
 	writeShopPage(w, title, panel+content+`</div>`+shopFootT(lang, back))
 }
 
