@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Shroombrew</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="style.css">
+<script src="i18n.js"></script><script src="app.js"></script><script src="site.js"></script></head>
+<body><div class="wrap">
+<!-- The whole website is this one page. site.js shows one of the templates
+     below for the address's #page (#cards, #link, ...); the frame around it,
+     the menu and the music stay put while you move between pages. -->
+<header class="top"><h1 id="title"></h1><div class="rule"></div>
+<nav id="nav" data-page="index"></nav></header>
+<div id="msg"></div>
+<main id="view"></main>
+
+<template id="p-index">
+<div class="box hero">
+  <h2 data-i18n="k_h">Get your Wii Points card code</h2>
+  <p data-i18n="k_p">Cards are worth 1000 to 5000 Wii Points each and work once.</p>
+  <a class="btn main" href="#cards" data-i18n="k_btn">Make a card</a>
+</div>
+<div class="box"><h2 data-i18n="i_pages">Pages</h2><ul>
+<li><a href="#cards" data-i18n="n_cards">Wii Points</a></li>
+<li><a href="#link" data-i18n="lk_title">Link your Wii</a></li>
+<li><a href="#friends" data-i18n="i_friends">Friends</a></li>
+<li><a href="#history" data-i18n="h_title">Points history</a></li>
+<li><a href="#titles" data-i18n="i_titles">Title sheet</a></li>
+<li><a href="#support" data-i18n="i_support">Support</a></li>
+<li><a href="#status" data-i18n="i_status">Status</a></li></ul>
+<p class="muted" data-i18n="i_season"></p></div>
+<div class="box"><h2 data-i18n="i_next">Coming next</h2><ul>
+<li data-i18n="i_next1"></li><li data-i18n="i_next2"></li></ul>
+<h2 data-i18n="i_np">Not planned</h2><ul><li data-i18n="i_np1"></li><li data-i18n="i_np2"></li><li data-i18n="i_np3"></li></ul></div>
+<div class="box"><h2 data-i18n="i_translate">Help translate</h2><p data-i18n="i_translate_p"></p>
+<p><a class="btn" href="mailto:translations@shroombrew.org?subject=Shroombrew%20translation">translations@shroombrew.org</a></p></div>
+</template>
+
+<template id="p-cards">
+<div class="box hero">
+  <h2 data-i18n="k_h">Get your Wii Points card code</h2>
+  <p data-i18n="k_pick">Pick how many Wii Points the card is worth.</p>
+  <p><label><span data-i18n="k_value">Value</span>:
+    <select id="cardValue">
+      <option value="1000">1000 Wii Points</option>
+      <option value="2000">2000 Wii Points</option>
+      <option value="3000">3000 Wii Points</option>
+      <option value="4000">4000 Wii Points</option>
+      <option value="5000">5000 Wii Points</option>
+    </select></label></p>
+  <button id="make" class="main" data-i18n="k_btn">Make a card</button>
+  <p class="timer" id="timer"></p>
+  <p class="muted" data-i18n="k_howto"></p>
+  <p class="muted" data-i18n="k_rules"></p>
+</div>
+<div id="linkhint" class="box" style="display:none"><span data-i18n="k_need_link">Link your Wii to add points from here.</span>
+  <a class="btn sm" href="#link" data-i18n="n_link">Link</a></div>
+<div id="cards" class="cardlist"></div>
+</template>
+
+<template id="p-link">
+<div class="box" id="form">
+  <p data-i18n="lk_p">On your Wii open Settings, choose Link to the website, press Get a new code and type it here.</p>
+  <p><input id="code" maxlength="9" size="12" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXX-XXXX" class="big" style="text-transform:uppercase;width:12em">
+     <button id="go" class="main" data-i18n="lk_btn">Link</button></p>
+</div>
+<div class="box" id="done" style="display:none">
+  <p class="ok"><b data-i18n="lk_state">Your Wii is linked.</b></p>
+  <p><a class="btn main" href="#friends" data-i18n="n_friends">Friends</a>
+     <a class="btn" href="#cards" data-i18n="n_cards">Wii Points</a>
+     <button id="out" data-i18n="lk_signout">Sign out of this site</button></p>
+</div>
+</template>
+
+<template id="p-friends">
+<div id="needlink" class="box" style="display:none"><p data-i18n="f_need_link">Link your Wii to use this page.</p>
+  <a class="btn main" href="#link" data-i18n="f_go_link">Link now</a></div>
+<div id="main" style="display:none">
+<div class="box">
+  <p data-i18n="f_code">Your friend code</p>
+  <p><b id="code" class="big">...</b> <button id="copy" class="sm" data-i18n="f_copy">Copy</button></p>
+  <p class="muted" data-i18n="f_share"></p>
+  <p><span data-i18n="f_level">Reward level</span>: <b id="tier"></b> (<span id="refs">0</span> <span data-i18n="f_refs"></span>)
+     &nbsp; <b id="points">0</b> <span data-i18n="f_points">Wii Points</span></p>
+  <p class="muted" data-i18n="f_tiers"></p>
+</div>
+<div class="box" id="redeemBox">
+  <h2 data-i18n="f_enter">Enter a friend's code</h2>
+  <input id="rcode" maxlength="14" size="18" placeholder="XXXX-XXXX-XXXX" style="text-transform:uppercase">
+  <button id="redeem" class="main" data-i18n="f_redeem">Redeem</button>
+</div>
+<div class="box"><h2 data-i18n="f_in">Gifts for you</h2><div id="incoming"></div></div>
+<div class="box"><h2 data-i18n="f_out">Gifts you sent</h2><div id="outgoing"></div></div>
+<div class="box"><h2 data-i18n="f_send">Send a gift</h2>
+  <p class="muted" data-i18n="f_send_p"></p>
+  <p><label><span data-i18n="f_friend_code">Friend's code</span><br><input id="gcode" maxlength="14" size="18" placeholder="XXXX-XXXX-XXXX" style="text-transform:uppercase"></label></p>
+  <p><label><span data-i18n="f_app">App</span><br><select id="gapp" style="max-width:100%"></select></label></p>
+  <p><label><span data-i18n="f_msg">Message (optional)</span><br><input id="gmsg" maxlength="120" size="40"></label></p>
+  <button id="gsend" class="main" data-i18n="f_send_btn">Send gift</button>
+</div>
+<div class="box"><h2 data-i18n="f_updates">Updates available</h2><div id="updates"></div></div>
+</div>
+</template>
+
+<template id="p-history">
+<div id="needlink" class="box" style="display:none"><p data-i18n="f_need_link">Link your Wii to use this page.</p>
+  <a class="btn main" href="#link" data-i18n="f_go_link">Link now</a></div>
+<div id="main" style="display:none">
+  <div class="box"><p><b class="big" id="points">0</b> <span data-i18n="f_points">Wii Points</span></p></div>
+  <div class="box"><table><tbody id="rows"></tbody></table><p class="muted" id="empty" data-i18n="h_empty"></p></div>
+</div>
+</template>
+
+<template id="p-titles">
+<div class="box">
+  <input id="q" type="search" data-i18n-ph="t_search" placeholder="Search titles, publishers, descriptions..." size="38">
+  <select id="section">
+    <option value="" data-i18n="t_all_sections">All sections</option>
+    <option value="Homebrew" data-i18n="t_s_hb">Homebrew</option>
+    <option value="Virtual Console">Virtual Console</option>
+    <option value="WiiWare">WiiWare</option>
+    <option value="DLC" data-i18n="t_s_dlc">WiiWare add-ons (DLC)</option>
+    <option value="Channels" data-i18n="t_s_ch">Wii Channels</option>
+  </select>
+  <select id="genre"><option value="" data-i18n="t_all_genres">All genres</option></select>
+  <select id="sort">
+    <option value="alpha" data-i18n="t_alpha">Alphabetical</option>
+    <option value="new" data-i18n="t_new">Newest</option>
+    <option value="old" data-i18n="t_old">Oldest</option>
+    <option value="small" data-i18n="t_small">Smallest download</option>
+    <option value="big" data-i18n="t_big">Largest download</option>
+  </select>
+  <span id="count" class="muted"></span>
+</div>
+<div class="box" style="overflow-x:auto"><table id="t"><thead><tr><th data-i18n="t_c_title">Title</th><th data-i18n="t_c_plat">Platform</th><th data-i18n="t_c_genre">Genre</th><th data-i18n="t_c_pub">Publisher</th><th data-i18n="t_c_pts">Wii Points</th><th data-i18n="t_c_rel">Released</th><th data-i18n="t_c_size">Size</th><th></th></tr></thead><tbody></tbody></table>
+<p class="muted" id="more"></p></div>
+</template>
+
+<template id="p-support">
+<div class="box"><h2 data-i18n="s_checker">Error code checker</h2>
+  <input id="code" inputmode="numeric" maxlength="6" data-i18n-ph="s_ph" placeholder="e.g. 209601">
+  <button id="go" data-i18n="s_check">Check</button>
+  <div id="res" style="margin-top:10px"></div>
+  <p class="muted"><a href="#status" data-i18n="s_hint">Check the status page first.</a></p>
+</div>
+<div class="box"><h2 data-i18n="s_install">Install checklist</h2><ol>
+  <li data-i18n="s_i1"></li><li data-i18n="s_i2"></li><li data-i18n="s_i3"></li>
+  <li data-i18n="s_i4"></li><li data-i18n="s_i5"></li><li data-i18n="s_i6"></li>
+</ol></div>
+<div class="box"><h2 data-i18n="s_points">Wii Points card helper</h2>
+  <p data-i18n="s_points_p"></p>
+  <input id="card" size="26" placeholder="XXXX-XXXX-XXXX-XXXX">
+  <button id="clean" data-i18n="s_clean">Clean</button> <b id="cardout"></b>
+</div>
+<div class="box"><h2 data-i18n="s_known">Known issues</h2><ul>
+  <li data-i18n="s_k1"></li><li data-i18n="s_k2"></li><li data-i18n="s_k3"></li><li data-i18n="s_k4"></li>
+  <li data-i18n="s_k5"></li><li data-i18n="s_k6"></li><li data-i18n="s_k7"></li><li data-i18n="s_k8"></li>
+</ul></div>
+<div class="box"><h2 data-i18n="s_before">Before you ask for help, include</h2><ul>
+  <li data-i18n="s_b1"></li><li data-i18n="s_b2"></li><li data-i18n="s_b3"></li></ul></div>
+</template>
+
+<template id="p-status">
+<div class="box"><h2 id="s">...</h2>
+<p class="muted" id="d"></p>
+<p class="muted" id="every"></p>
+<p class="bad" id="simnote" style="display:none"></p>
+<p data-i18n="st_help">Down for you but up here? See Support.</p>
+<p><a href="#status&amp;down" id="simlink"></a></p></div>
+</template>
+
+<script src="https://shop.shroombrew.org/shroombrew-season.js"></script>
+</div>
+<template id="p-wad">
+<div class="box hero">
+  <h2 data-i18n="wad_h">Wii Shop Channel WAD</h2>
+  <p data-i18n="wad_p">Install the patched Wii Shop Channel on a Wii.</p>
+  <p><a class="btn main" data-i18n="wad_dl" download="WiiShop-Shroombrew-v21.wad" href="https://shroombrew.org/WiiShop-Shroombrew-v21.wad">Download WAD</a></p>
+  <p class="muted" data-i18n="wad_meta" title="SHA-256: 8b9e46bf8a6cd85d6c6624e366eedc4b8245f9fcc0bb014df26448cc10c3a0ca">USA v21 &middot; 26,051,584 bytes &middot; SHA-256 8b9e46bf&hellip;c3a0ca</p>
+</div>
+<div class="box">
+  <h2 data-i18n="wad_steps">Install</h2>
+  <ol>
+    <li data-i18n="wad_s1">Copy the WAD to the WAD folder on your SD card or USB drive.</li>
+    <li data-i18n="wad_s2">Use YAWMME (YAWM ModMii Edition) or Wii Mod Lite under IOS249.</li>
+    <li data-i18n="wad_s3">Install to system memory (NAND), then launch Wii Shop Channel.</li>
+  </ol>
+  <p class="muted" data-i18n="wad_warn">Built for original Wii. vWii/Wii U is untested&mdash;back up first. If it still tries Nintendo, reinstall the patched WAD and relaunch.</p>
+</div>
+</template>
+
+</body></html>

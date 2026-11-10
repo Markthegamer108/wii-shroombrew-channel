@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Shroombrew Status</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="style.css">
+<script src="i18n.js"></script></head>
+<body><div class="wrap">
+<header class="top"><h1 data-i18n="st_title">Status</h1><div class="rule"></div>
+<nav id="nav" data-page="status"></nav></header>
+<div class="box"><h2 id="s">...</h2>
+<p class="muted" id="d"></p>
+<p class="muted" id="every"></p>
+<p class="bad" id="simnote" style="display:none"></p>
+<p data-i18n="st_help">Down for you but up here? See Support.</p>
+<p><a href="#down" id="simlink"></a></p></div>
+<script>
+(function(){
+var state=null,timer=null,pending=null;
+// English for strings a cached older language file may not have yet.
+var EN={st_noresp:"No response from the server.",st_every:"Checked again every 10 seconds.",st_sim:"Simulated outage: the page is checking a server address that cannot answer.",st_sim_on:"Simulate an outage",st_sim_off:"Stop the simulation"};
+function T(k,v){var s=I18N.t(k,v);return (s===k&&EN[k])?EN[k]:s;}
+// status.html#down checks an address nothing answers on, so the page's real
+// "offline" path can be tried without taking the shop down.
+function simulated(){return location.hash==="#down";}
+function show(){
+  var sim=simulated(),link=document.getElementById("simlink");
+  document.getElementById("every").textContent=T("st_every");
+  document.getElementById("simnote").textContent=T("st_sim");
+  document.getElementById("simnote").style.display=sim?"":"none";
+  link.textContent=T(sim?"st_sim_off":"st_sim_on");
+  link.setAttribute("href",sim?"#":"#down");
+  if(!state)return;
+  document.getElementById("s").innerHTML=state.ok?"<span class='ok'>"+I18N.t("st_online")+"</span>":"<span class='bad'>"+I18N.t("st_offline")+"</span>";
+  document.getElementById("d").textContent=state.ok?I18N.t("st_resp",{ms:state.ms,time:state.time}):(state.code?I18N.t("st_fail",{n:state.code}):T("st_noresp"))+" "+state.time;
+}
+function check(){
+  if(pending)pending.abort();
+  var x=new XMLHttpRequest(),t0=new Date().getTime();
+  pending=x;
+  x.open("GET",(simulated()?"https://shop.shroombrew.org:9/healthz":"https://shop.shroombrew.org/healthz")+"?t="+t0,true);
+  x.timeout=8000;
+  x.onreadystatechange=function(){if(x.readyState!==4||pending!==x)return;pending=null;
+    state={ok:x.status===200,code:x.status,ms:new Date().getTime()-t0,time:new Date().toLocaleTimeString()};show();};
+  x.send();
+}
+function every10(){
+  clearInterval(timer);
+  timer=setInterval(function(){if(!document.hidden)check();},10000);
+}
+I18N.ready(function(){
+  document.getElementById("s").textContent=I18N.t("st_checking");
+  I18N.onChange=show;
+  show();check();every10();
+  // Switching the simulation on or off checks again straight away.
+  window.addEventListener("hashchange",function(){state=null;document.getElementById("s").textContent=I18N.t("st_checking");show();check();every10();});
+  // Coming back to the tab checks at once instead of waiting.
+  document.addEventListener("visibilitychange",function(){if(!document.hidden)check();});
+});
+})();
+</script>
+<script src="https://shop.shroombrew.org/shroombrew-season.js"></script>
+</div></body></html>

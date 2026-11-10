@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Shroombrew</title>
+<script>
+// GitHub Pages 404: send old addresses such as cards.html to the single page.
+(function () {
+  var p = location.pathname.replace(/\/+$/, "");
+  var name = p.split("/").pop().replace(/\.html$/, "");
+  if (!name || name === "404" || name === "index") name = "";
+  location.replace("/" + (name ? "#" + name : ""));
+})();
+</script>
+<meta http-equiv="refresh" content="0; url=/">
+</head><body></body></html>
